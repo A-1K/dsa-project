@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard | Pakistan</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* [KEEP YOUR EXISTING CSS HERE - NO CHANGES NEEDED IN CSS] */
+        :root { --bg-body: #0f172a; --bg-panel: #1e293b; --text-primary: #f8fafc; --text-secondary: #94a3b8; --accent-color: #6366f1; --accent-hot: #f43f5e; --accent-cool: #3b82f6; --border-color: rgba(255, 255, 255, 0.05); --chart-grid: rgba(255, 255, 255, 0.1); }
+        [data-theme="light"] { --bg-body: #f1f5f9; --bg-panel: #ffffff; --text-primary: #0f172a; --text-secondary: #64748b; --accent-color: #4f46e5; --border-color: rgba(0, 0, 0, 0.05); --chart-grid: rgba(0, 0, 0, 0.05); }
+        * { box-sizing: border-box; transition: background 0.3s, color 0.3s; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: var(--bg-body); color: var(--text-primary); margin: 0; padding: 20px; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr 340px; gap: 24px; }
+        @media (max-width: 1200px) { .container { grid-template-columns: 300px 1fr; } .right-panel { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;} }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .right-panel { grid-template-columns: 1fr; } }
+        .card { background-color: var(--bg-panel); border-radius: 16px; padding: 24px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        h2, h3, h4 { margin: 0 0 16px 0; font-weight: 600; }
+        .text-muted { color: var(--text-secondary); font-size: 0.9rem; }
+        .btn { background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:hover { opacity: 0.9; }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+        .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-input { flex: 1; background: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 14px; border-radius: 8px; outline: none; }
+        .current-weather { text-align: center; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+        .temp-display { font-size: 4rem; font-weight: 700; line-height: 1; margin: 16px 0; letter-spacing: -2px; }
+        .weather-meta { display: flex; justify-content: center; gap: 20px; margin-top: 10px; color: var(--text-secondary); }
+        .city-list-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 10px; }
+        .city-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; background: var(--bg-body); border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+        .city-item:hover { border-color: var(--accent-color); }
+        .city-item.active { background: var(--accent-color); color: white; }
+        .city-item.active .text-muted { color: rgba(255,255,255,0.8); }
+        .chart-container { position: relative; height: 300px; width: 100%; margin-top: 20px; }
+        .route-connections { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .route-badge { background: rgba(99, 102, 241, 0.1); color: var(--accent-color); padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; cursor: pointer;}
+        .news-item { padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+        .news-item:last-child { border-bottom: none; }
+        .news-tag { font-size: 0.75rem; background: var(--accent-hot); color: white; padding: 2px 6px; border-radius: 4px; }
+        .leaderboard-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color); cursor:pointer; }
+        .rank-circle { width: 24px; height: 24px; background: var(--bg-body); border-radius: 50%; text-align: center; line-height: 24px; font-size: 0.8rem; font-weight: bold; color: var(--text-secondary); margin-right: 10px; }
+        .rank-1 { color: #f59e0b; }
+    </style>
+</head>
+<body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; max-width: 1400px; margin-left: auto; margin-right: auto;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: var(--accent-color); color: white; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fas fa-cloud-sun-rain"></i>
+            </div>
+            <h2 style="margin: 0;">WeatherPro <span style="font-weight: 300; opacity: 0.7;">Dashboard</span></h2>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline btn-sm" onclick="exportCSV()">
+                <i class="fas fa-file-csv"></i> Export CSV
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="toggleTheme()">
+                <i class="fas fa-moon" id="theme-icon"></i> <span id="theme-text">Dark Mode</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <div class="card">
+            <div class="search-bar">
+                <input type="text" id="citySearch" class="search-input" placeholder="Search city...">
+                <button class="btn btn-sm" onclick="handleSearch()"><i class="fas fa-search"></i></button>
+            </div>
+
+            <div class="city-list-title">Quick Select</div>
+            <div id="city-list">
+                <div class="city-item" onclick="fetchWeather('Islamabad')">
+                    <span>Islamabad</span> <i class="fas fa-chevron-right text-muted"></i>
+                </div>
+                <div class="city-item" onclick="fetchWeather('Lahore')">
+                    <span>Lahore</span> <i class="fas fa-chevron-right text-muted"></i>
+                </div>
+                <div class="city-item" onclick="fetchWeather('Karachi')">
+                    <span>Karachi</span> <i class="fas fa-chevron-right text-muted"></i>
+                </div>
+                
+                <div class="city-item" onclick="fetchWeather('Topi')">
+                    <span>Topi</span> <i class="fas fa-chevron-right text-muted"></i>
+                </div>
+                <div class="city-item" onclick="fetchWeather('Seraikistan')">
+                    <span>Seraikistan</span> <i class="fas fa-chevron-right text-muted"></i>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <div class="city-list-title">Regional Analysis</div>
+                <div class="leaderboard-row">
+                    <span class="text-muted">Avg Temp</span>
+                    <strong>32.5°C</strong>
+                </div>
+                <div class="leaderboard-row">
+                    <span class="text-muted">Wind Max</span>
+                    <strong>45 km/h</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-panel">
+            <div class="card" style="margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h2 id="display-city" style="font-size: 2rem; margin-bottom: 5px;">--</h2>
+                        <span class="text-muted" id="display-date">Fetching data...</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="temp-display"><span id="display-temp">--</span>°</div>
+                        <div class="text-muted" id="display-condition">Sunny</div>
+                    </div>
+                </div>
+
+                <div class="weather-meta">
+                    <div><i class="fas fa-wind"></i> <span id="display-wind">--</span> km/h</div>
+                    <div><i class="fas fa-tint"></i> <span id="display-hum">--</span>% Hum</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Annual Temperature Overview</h3>
+                    <select class="search-input" style="width: auto; padding: 5px 10px;" id="chartType" onchange="updateChart()">
+                        <option value="temp">Temperature</option>
+                        <option value="rain">Rainfall</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="weatherChart"></canvas>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4 style="font-size: 1rem; color: var(--text-secondary);">Connecting Flight Routes</h4>
+                    <div class="route-connections" id="neighbors-box">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="card" style="margin-bottom: 24px;">
+                <h3><i class="fas fa-temperature-high" style="color: var(--accent-hot);"></i> Hottest Cities</h3>
+                <div id="hottest-box"></div>
+            </div>
+
+            <div class="card">
+                <h3>Weather News</h3>
+                <div class="news-item">
+                    <div style="margin-bottom: 5px;">
+                        <span class="news-tag">ALERT</span> <span class="text-muted" style="font-size: 0.8rem;">2 mins ago</span>
+                    </div>
+                    <div style="font-weight: 500;">Monsoon season expected to start early this year in Punjab.</div>
+                </div>
+                <div class="news-item">
+                    <div style="margin-bottom: 5px;">
+                        <span class="news-tag" style="background: var(--accent-cool);">INFO</span> <span class="text-muted" style="font-size: 0.8rem;">1 hour ago</span>
+                    </div>
+                    <div style="font-weight: 500;">Clear skies predicted for cricket match in Lahore.</div>
+                </div>
+                <div class="news-item">
+                    <div style="margin-bottom: 5px;">
+                        <span class="news-tag" style="background: #f59e0b;">WARNING</span> <span class="text-muted" style="font-size: 0.8rem;">4 hours ago</span>
+                    </div>
+                    <div style="font-weight: 500;">Heatwave advisory issued for Southern Sindh region.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- THEME HANDLING ---
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (body.getAttribute('data-theme') === 'light') {
+                body.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-moon'; text.innerText = "Dark Mode";
+            } else {
+                body.setAttribute('data-theme', 'light');
+                icon.className = 'fas fa-sun'; text.innerText = "Light Mode";
+            }
+        }
+
+        // --- CHART JS SETUP ---
+        let mainChart = null;
+
+        function initChart() {
+            const ctx = document.getElementById('weatherChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.5)');
+            gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+            mainChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Avg Temp (°C)',
+                        data: [12, 15, 20, 25, 30, 34, 33, 31, 29, 25, 19, 14], 
+                        borderColor: '#6366f1',
+                        backgroundColor: gradient,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#1e293b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        // --- FETCH LOGIC ---
+        async function fetchWeather(cityName) {
+            try {
+                document.getElementById('display-city').innerText = "Loading...";
+                document.querySelectorAll('.city-item').forEach(el => el.classList.remove('active'));
+
+                const response = await fetch(`/data?city=${cityName}`);
+                if (!response.ok) throw new Error("Server Error");
+                const data = await response.json();
+
+                if (!data.city) {
+                    document.getElementById('display-city').innerText = "Not Found";
+                    return;
+                }
+
+                document.getElementById('display-city').innerText = data.city;
+                document.getElementById('display-temp').innerText = data.current.temperature_2d;
+                document.getElementById('display-wind').innerText = data.current.wind_speed_10m;
+                document.getElementById('display-hum').innerText = data.current.relative_humidity_2d;
+                
+                const date = new Date();
+                document.getElementById('display-date').innerText = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+                // NEIGHBORS (Graph Data)
+                const neighborsBox = document.getElementById('neighbors-box');
+                neighborsBox.innerHTML = '';
+                if(data.neighbors && data.neighbors.length > 0) {
+                    data.neighbors.forEach(n => {
+                        // Added onClick to make neighbors clickable
+                        neighborsBox.innerHTML += `
+                            <div class="route-badge" onclick="fetchWeather('${n}')">
+                                <i class="fas fa-plane-departure"></i> ${n}
+                            </div>
+                        `;
+                    });
+                } else {
+                    neighborsBox.innerHTML = '<span class="text-muted">No direct routes available.</span>';
+                }
+
+                // HOTTEST CITIES
+                const hottestBox = document.getElementById('hottest-box');
+                hottestBox.innerHTML = '';
+                if(data.hottest_cities) {
+                    data.hottest_cities.forEach((city, index) => {
+                        const rankColor = index === 0 ? "rank-1" : "";
+                        // Added onClick to make leaderboard clickable
+                        hottestBox.innerHTML += `
+                            <div class="leaderboard-row" onclick="fetchWeather('${city.name}')">
+                                <div style="display:flex; align-items:center;">
+                                    <span class="rank-circle ${rankColor}">${index + 1}</span>
+                                    <span>${city.name}</span>
+                                </div>
+                                <strong style="color:var(--accent-hot);">${city.temp}°C</strong>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Randomize Chart Data (Simulated for this version)
+                const baseTemp = data.current.temperature_2d;
+                const simulatedData = Array.from({length: 12}, () => Math.floor(baseTemp - 10 + Math.random() * 15));
+                mainChart.data.datasets[0].data = simulatedData;
+                mainChart.update();
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('display-city').innerText = "Offline";
+            }
+        }
+
+        function exportCSV() {
+            const city = document.getElementById('display-city').innerText;
+            if (city === "--" || city === "Loading..." || city === "Not Found" || city === "Offline") return;
+
+            let csv = "data:text/csv;charset=utf-8,";
+            csv += "REPORT TYPE,CITY,DATE,TEMP (C),WIND (km/h),HUMIDITY (%)\n";
+            csv += `Current Weather,${city},${new Date().toLocaleDateString()},${document.getElementById('display-temp').innerText},${document.getElementById('display-wind').innerText},${document.getElementById('display-hum').innerText}\n\n`;
+
+            csv += "MONTHLY FORECAST (SIMULATED)\nMonth,Avg Temp (C)\n";
+            const months = mainChart.data.labels;
+            const temps = mainChart.data.datasets[0].data;
+            months.forEach((m, i) => { csv += `${m},${temps[i]}\n`; });
+
+            const encodedUri = encodeURI(csv);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `weather_report_${city}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function handleSearch() {
+            const city = document.getElementById('citySearch').value;
+            if(city) fetchWeather(city);
+        }
+
+        window.onload = () => {
+            initChart();
+            fetchWeather('Islamabad');
+        };
+
+    </script>
+</body>
+</html>
