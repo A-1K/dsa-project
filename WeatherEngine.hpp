@@ -11,23 +11,39 @@
 #include <list>
 #include <mutex>
 
-// Removed "using namespace std;" to prevent conflict with Windows "byte"
-
 // --- DATA MODELS ---
+
+// New Struct for Daily Forecast (DSA: Struct/Object)
+struct DailyForecast {
+    std::string dayName;
+    int high;
+    int low;
+    std::string condition; // e.g., "Sunny", "Rainy"
+};
+
 struct City {
     std::string name;
     double lat, lon;
     int temp, humidity, wind;
     std::string condition;
+    
+    // --- DSA: VECTORS FOR TIME-SERIES DATA ---
+    // Instead of generating these in JS, we store them here.
+    std::vector<int> hourlyData;  // 24 points
+    std::vector<int> weeklyData;  // 7 points
+    std::vector<int> monthlyData; // 30 points
+    std::vector<int> yearlyData;  // 12 points
+
+    // --- DSA: VECTOR FOR FORECAST OBJECTS ---
+    std::vector<DailyForecast> tenDayForecast;
 };
 
 // Priority Level for Heap
 struct Alert {
-    int severity; // 10 = High, 1 = Low
+    int severity; 
     std::string message;
     std::string city;
 
-    // Operator overload for Max-Heap (Highest severity on top)
     bool operator<(const Alert& other) const {
         return severity < other.severity;
     }
@@ -36,22 +52,13 @@ struct Alert {
 // --- THE ENGINE CLASS ---
 class WeatherEngine {
 private:
-    // DSA 1: Hash Map for O(1) City Lookup
     std::unordered_map<std::string, City> cityDatabase;
-
-    // DSA 2: Graph (Adjacency List) to connect cities (e.g., Isb -> Rawalpindi)
     std::unordered_map<std::string, std::vector<std::string>> cityGraph;
-
-    // DSA 3: Max-Heap (Priority Queue) for Alerts
     std::priority_queue<Alert> alertSystem;
-
-    // DSA 4: Stack for Request History (LIFO)
     std::stack<std::string> requestLogs;
-
-    std::mutex engineMutex; // Thread safety
+    std::mutex engineMutex;
 
 public:
-    // --- 1. HASH MAP OPERATIONS ---
     void addCity(const City& c) {
         std::lock_guard<std::mutex> lock(engineMutex);
         cityDatabase[c.name] = c;
@@ -64,11 +71,10 @@ public:
         return nullptr;
     }
 
-    // --- 2. GRAPH OPERATIONS ---
     void addRoute(const std::string& cityA, const std::string& cityB) {
         std::lock_guard<std::mutex> lock(engineMutex);
         cityGraph[cityA].push_back(cityB);
-        cityGraph[cityB].push_back(cityA); // Undirected graph
+        cityGraph[cityB].push_back(cityA); 
     }
 
     std::vector<std::string> getNeighbors(const std::string& name) {
@@ -78,7 +84,6 @@ public:
         return {};
     }
 
-    // --- 3. HEAP OPERATIONS ---
     void addAlert(int severity, std::string msg, std::string city) {
         std::lock_guard<std::mutex> lock(engineMutex);
         alertSystem.push({severity, msg, city});
@@ -87,8 +92,7 @@ public:
     std::vector<Alert> getTopAlerts(int k) {
         std::lock_guard<std::mutex> lock(engineMutex);
         std::vector<Alert> topAlerts;
-        std::priority_queue<Alert> temp = alertSystem; // Copy so we don't empty original
-
+        std::priority_queue<Alert> temp = alertSystem; 
         while (!temp.empty() && k > 0) {
             topAlerts.push_back(temp.top());
             temp.pop();
@@ -97,35 +101,27 @@ public:
         return topAlerts;
     }
 
-    // --- 4. SORTING & LIST OPERATIONS ---
-    // Returns top k cities sorted by Temperature (Hot to Cold)
     std::vector<City> getHottestCities(int k) {
         std::lock_guard<std::mutex> lock(engineMutex);
         std::vector<City> allCities;
-        
-        // Convert Hash Map to Vector for sorting
         for (auto& pair : cityDatabase) {
             allCities.push_back(pair.second);
         }
-
-        // Optimization: Partial Sort is faster than full sort for Top K
         if (k > allCities.size()) k = allCities.size();
         
         std::partial_sort(allCities.begin(), allCities.begin() + k, allCities.end(), 
             [](const City& a, const City& b) {
-                return a.temp > b.temp; // Descending order
+                return a.temp > b.temp; 
             });
 
-        // Resize to keep only top k
         allCities.resize(k);
         return allCities;
     }
 
-    // --- 5. STACK OPERATIONS ---
     void logRequest(std::string req) {
         std::lock_guard<std::mutex> lock(engineMutex);
         requestLogs.push(req);
-        if(requestLogs.size() > 50) requestLogs.pop(); // Keep size manageable
+        if(requestLogs.size() > 50) requestLogs.pop();
     }
 };
 
