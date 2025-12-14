@@ -1,230 +1,250 @@
-// Compile command: 
-// g++ -std=c++17 main.cpp -o weather_app -lws2_32
-#include<winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#include "WeatherEngine.hpp"
-#include "NetworkUtils.hpp"
-#include <thread>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <thread>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
 
-WeatherEngine engine;
+// ==========================================
+// 1. LINKED LIST (10-Day Forecast)
+// ==========================================
+struct Node {
+    string day; int high, low; Node* next;
+    Node(string d, int h, int l) : day(d), high(h), low(l), next(nullptr) {}
+};
 
-void handleClient(SOCKET clientSock) {
-    char buffer[4096];
-    int bytesReceived = recv(clientSock, buffer, 4096, 0);
-    if (bytesReceived <= 0) {
-        closesocket(clientSock);
-        return;
+class ForecastList {
+public:
+    Node* head;
+    ForecastList() : head(nullptr) {}
+    
+    void add(string d, int h, int l) {
+        Node* n = new Node(d, h, l);
+        if(!head) head = n;
+        else { Node* t = head; while(t->next) t=t->next; t->next = n; }
     }
 
-    string request(buffer, bytesReceived);
-    stringstream ss(request);
-    string method, url;
-    ss >> method >> url;
-
-    engine.logRequest(method + " " + url);
-
-    if (url == "/" || url == "/index.html") {
-        string html = SimpleServer::loadHtmlFile("index.html");
-        SimpleServer::sendResponse(clientSock, html, "text/html");
-    }
-    else if (url.find("/data") != string::npos) {
-        string cityName = SimpleServer::getQueryParam(url, "city");
-        if(cityName.empty()) cityName = "Islamabad"; 
-
-        size_t pos;
-        while ((pos = cityName.find("%20")) != string::npos) {
-            cityName.replace(pos, 3, " ");
-        }
-
-        City* c = engine.getCity(cityName);
-        
-        if (c) {
-            stringstream json;
-            json << "{";
-            json << "\"city\": \"" << c->name << "\",";
-            json << "\"lat\": " << c->lat << ",";
-            json << "\"lon\": " << c->lon << ",";
-            json << "\"current\": {";
-            json << "\"temperature_2d\": " << c->temp << ",";
-            json << "\"wind_speed_10m\": " << c->wind << ",";
-            json << "\"relative_humidity_2d\": " << c->humidity << ",";
-            json << "\"condition\": \"" << c->condition << "\"";
-            json << "},";
-            
-            // --- NEW: Serialize C++ Vectors to JSON Arrays ---
-            
-            // 1. Hourly Data
-            json << "\"hourly\": [";
-            for(size_t i=0; i<c->hourlyData.size(); i++) json << c->hourlyData[i] << (i<c->hourlyData.size()-1?",":"");
-            json << "],";
-
-            // 2. Weekly Data
-            json << "\"weekly\": [";
-            for(size_t i=0; i<c->weeklyData.size(); i++) json << c->weeklyData[i] << (i<c->weeklyData.size()-1?",":"");
-            json << "],";
-
-            // 3. Monthly Data
-            json << "\"monthly\": [";
-            for(size_t i=0; i<c->monthlyData.size(); i++) json << c->monthlyData[i] << (i<c->monthlyData.size()-1?",":"");
-            json << "],";
-
-            // 4. Yearly Data
-            json << "\"yearly\": [";
-            for(size_t i=0; i<c->yearlyData.size(); i++) json << c->yearlyData[i] << (i<c->yearlyData.size()-1?",":"");
-            json << "],";
-
-            // 5. Daily Forecast Objects
-            json << "\"forecast\": [";
-                for(size_t i = 0; i < c->tenDayForecast.size(); i++) {
-                    json << "{";
-                    json << "\"day\": \"" << c->tenDayForecast[i].dayName << "\",";
-                    json << "\"high\": " << c->tenDayForecast[i].high << ",";
-                    json << "\"low\": " << c->tenDayForecast[i].low << ",";
-                    json << "\"cond\": \"" << c->tenDayForecast[i].condition << "\"";
-                    
-                    // FIXED LINE: Check against the VECTOR size, not the object
-                    json << "}";
-                    if (i < c->tenDayForecast.size() - 1) {
-                        json << ",";
-                    }
-                }
-            json << "],";
-
-            // ------------------------------------------------
-
-            vector<string> neighbors = engine.getNeighbors(cityName);
-            json << "\"neighbors\": [";
-            for(size_t i=0; i<neighbors.size(); i++) {
-                json << "\"" << neighbors[i] << "\"" << (i < neighbors.size()-1 ? "," : "");
-            }
-            json << "],";
-
-            vector<City> hottest = engine.getHottestCities(5);
-            json << "\"hottest_cities\": [";
-            for(size_t i=0; i<hottest.size(); i++) {
-                json << "{\"name\": \"" << hottest[i].name << "\", \"temp\": " << hottest[i].temp << "}" << (i < hottest.size()-1 ? "," : "");
-            }
-            json << "]";
-
-            json << "}";
-            SimpleServer::sendResponse(clientSock, json.str(), "application/json");
-        } else {
-            SimpleServer::sendResponse(clientSock, "{}", "application/json");
+    void generate10Days(int base) {
+        string days[] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+        for(int i=0; i<10; i++) {
+            int h = base + (rand()%6) - 2; 
+            int l = base - (rand()%6) - 5;
+            add(days[i%7], h, l);
         }
     }
-    else {
-        SimpleServer::sendResponse(clientSock, "404 Not Found", "text/plain");
-    }
+};
 
-    closesocket(clientSock);
+// ==========================================
+// 2. BST (City Search)
+// ==========================================
+struct City { 
+    string name; 
+    double lat, lon; 
+    int temp, wind, hum; 
+    int aqi;        // Air Quality Index
+    double rain;    // Rain in mm
+    int wind_dir;   // Wind Direction (0-360)
+    string cond; 
+    ForecastList fc; 
+};
+
+struct BSTNode { City data; BSTNode *left, *right; BSTNode(City c) : data(c), left(nullptr), right(nullptr) {} };
+
+class CityBST {
+    BSTNode* root;
+    BSTNode* insert(BSTNode* n, City c) {
+        if(!n) return new BSTNode(c);
+        if(c.name < n->data.name) n->left = insert(n->left, c);
+        else n->right = insert(n->right, c);
+        return n;
+    }
+    BSTNode* search(BSTNode* n, string name) {
+        if(!n || n->data.name == name) return n;
+        if(name < n->data.name) return search(n->left, name);
+        return search(n->right, name);
+    }
+    void inorder(BSTNode* n, vector<City>& list) {
+        if(!n) return;
+        inorder(n->left, list);
+        list.push_back(n->data);
+        inorder(n->right, list);
+    }
+public:
+    CityBST() : root(nullptr) {}
+    void add(City c) { root = insert(root, c); }
+    City* find(string n) { BSTNode* r = search(root, n); return r ? &r->data : nullptr; }
+    vector<City> getAll() { vector<City> l; inorder(root, l); return l; }
+};
+
+CityBST tree;
+
+// ==========================================
+// 3. DATA LOADING
+// ==========================================
+void createCSV() {
+    ofstream f("weather_data.csv");
+    // New Header with 10 columns
+    f << "City,Lat,Lon,Temp,Condition,Wind,Humidity,AQI,Rain,WindDir\n";
+    // Data populated with AQI, Rain, and Wind Direction
+    f << "Topi,34.07,72.63,12,Partly Cloudy,10,72,45,0.0,180\n";
+    f << "Islamabad,33.68,73.04,18,Rainy,12,65,120,5.2,45\n";
+    f << "Lahore,31.52,74.35,25,Sunny,8,40,350,0.0,90\n";
+    f << "Karachi,24.86,67.00,30,Windy,25,70,150,0.0,220\n";
+    f << "Seraikistan,29.35,71.69,32,Clear,5,20,90,0.0,135\n";
+    f << "Peshawar,34.01,71.52,15,Cloudy,7,55,180,1.5,300\n";
+    f << "Quetta,30.17,66.97,5,Snowy,15,40,30,12.0,10\n";
+    f << "Multan,30.15,71.52,28,Hot,6,30,200,0.0,270\n";
+    f.close();
+    cout << "Data file updated to new format." << endl;
 }
 
-void loadDummyData() {
-    // --- Helper for 10 Day Forecast ---
-    vector<DailyForecast> standardForecast = {
-        {"Mon", 32, 24, "Sunny"}, {"Tue", 34, 25, "Sunny"}, {"Wed", 30, 22, "Cloudy"},
-        {"Thu", 29, 21, "Rainy"}, {"Fri", 31, 23, "Sunny"}, {"Sat", 33, 24, "Clear"},
-        {"Sun", 32, 24, "Cloudy"}, {"Mon", 35, 26, "Hot"},   {"Tue", 36, 27, "Hot"}, 
-        {"Wed", 30, 22, "Windy"}
-    };
+void loadData() {
+    ifstream f("weather_data.csv");
+    string line; 
+    
+    // --- SMART CHECK: REGENERATE IF OLD FORMAT ---
+    bool regenerate = false;
+    if(!f.good()) {
+        regenerate = true;
+    } else {
+        getline(f, line); // Read header
+        // If header doesn't contain "AQI", it's the old file
+        if(line.find("AQI") == string::npos) regenerate = true;
+    }
 
-    // --- Helper for 10 Day Forecast (HOT REGIONS) ---
-    vector<DailyForecast> hotForecast = {
-        {"Mon", 42, 30, "Hot"}, {"Tue", 43, 31, "Hot"}, {"Wed", 41, 29, "Sunny"},
-        {"Thu", 40, 28, "Sunny"}, {"Fri", 42, 30, "Scorching"}, {"Sat", 44, 32, "Hot"},
-        {"Sun", 43, 31, "Hot"}, {"Mon", 41, 29, "Sunny"},   {"Tue", 40, 28, "Clear"}, 
-        {"Wed", 39, 27, "Dry"}
-    };
+    if(regenerate) {
+        f.close();
+        createCSV(); // Force overwrite
+        f.open("weather_data.csv");
+        getline(f, line); // Skip new header
+    }
+    // ---------------------------------------------
 
-    // ISLAMABAD
-    engine.addCity({"Islamabad", 33.6, 73.0, 22, 50, 10, "Cloudy", 
-        {18,19,20,22,24,25,24,23,22,21,20,19,18,18,19,20,21,22,23,24,25,24,23,22}, // Hourly
-        {20,22,21,23,24,22,21}, // Weekly
-        {18,20,22,25,28,30,28,26,24,22,20,18,15,12,10,12,15,18,20,22,24,25,24,22,20,18,16,15,18,20}, // Monthly
-        {10, 13, 18, 24, 30, 32, 31, 29, 28, 24, 17, 12}, // Yearly
-        standardForecast
-    });
+    while(getline(f, line)) {
+        stringstream ss(line); string item; vector<string> row;
+        while(getline(ss, item, ',')) row.push_back(item);
+        
+        // Only load if we have all 10 columns
+        if(row.size() >= 10) {
+            City c;
+            c.name = row[0]; 
+            c.lat = stod(row[1]); 
+            c.lon = stod(row[2]);
+            c.temp = stoi(row[3]); 
+            c.cond = row[4]; 
+            c.wind = stoi(row[5]); 
+            c.hum = stoi(row[6]);
+            c.aqi = stoi(row[7]);
+            c.rain = stod(row[8]);
+            c.wind_dir = stoi(row[9]);
 
-    // LAHORE
-    engine.addCity({"Lahore", 31.5, 74.3, 32, 40, 5, "Sunny",
-        {28,29,30,32,34,35,34,33,32,31,30,29,28,28,29,30,31,32,33,34,35,34,33,32},
-        {30,32,31,33,34,32,31},
-        {28,30,32,35,38,40,38,36,34,32,30,28,25,22,20,22,25,28,30,32,34,35,34,32,30,28,26,25,28,30},
-        {13, 16, 22, 28, 33, 34, 32, 31, 30, 26, 20, 14},
-        standardForecast
-    });
+            c.fc.generate10Days(c.temp);
+            tree.add(c);
+        }
+    }
+}
 
-    // KARACHI
-    engine.addCity({"Karachi", 24.8, 67.0, 35, 70, 20, "Rainy",
-        {30,31,31,32,33,33,32,31,30,30,29,29,28,28,29,30,31,32,33,33,32,31,30,29},
-        {32,33,32,33,34,33,32},
-        {30,31,32,33,34,35,34,33,32,31,30,29,28,27,26,27,28,29,30,31,32,33,32,31,30,29,28,27,29,31},
-        {19, 21, 25, 28, 31, 32, 30, 29, 29, 28, 25, 21},
-        standardForecast
-    });
+// ==========================================
+// 4. JSON GENERATOR
+// ==========================================
+string getJSON(string name) {
+    City* c = tree.find(name);
+    // Safety check: if Topi isn't found, tree might be empty
+    if(!c) {
+        // Try to get root if specific city fails
+        vector<City> all = tree.getAll();
+        if(!all.empty()) c = &all[0];
+        else return "{}"; // Empty JSON if no data
+    }
 
-    // MULTAN
-    engine.addCity({"Multan", 30.1, 71.4, 38, 20, 8, "Hot",
-        {34,35,36,38,40,41,40,39,38,37,36,35,34,34,35,36,37,38,39,40,41,40,39,38},
-        {36,38,37,39,40,38,37},
-        {34,36,38,41,44,46,44,42,40,38,36,34,31,28,26,28,31,34,36,38,40,41,40,38,36,34,32,31,34,36},
-        {13, 16, 22, 29, 34, 36, 34, 33, 32, 27, 20, 14},
-        hotForecast
-    });
+    stringstream ss;
+    ss << "{ \"city\": \"" << c->name << "\", \"lat\": " << c->lat << ", \"lon\": " << c->lon << ",";
+    ss << "\"current\": {";
+    ss << "\"temperature_2d\": " << c->temp << ",";
+    ss << "\"condition\": \"" << c->cond << "\",";
+    ss << "\"wind_speed_10m\": " << c->wind << ",";
+    ss << "\"relative_humidity_2d\": " << c->hum << ",";
+    ss << "\"aqi\": " << c->aqi << ",";
+    ss << "\"rain\": " << c->rain << ",";
+    ss << "\"wind_dir\": " << c->wind_dir;
+    ss << " },";
 
-    // TOPI
-    engine.addCity({"Topi", 34.07, 72.6, 21, 45, 15, "Windy",
-        {17,18,19,21,23,24,23,22,21,20,19,18,17,17,18,19,20,21,22,23,24,23,22,21},
-        {19,21,20,22,23,21,20},
-        {17,19,21,24,27,29,27,25,23,21,19,17,14,11,9,11,14,17,19,21,23,24,23,21,19,17,15,14,17,19},
-        {11, 13, 18, 24, 29, 32, 31, 29, 27, 22, 17, 12},
-        standardForecast
-    });
+    ss << "\"forecast\": [";
+    Node* curr = c->fc.head;
+    while(curr) {
+        ss << "{\"day\": \"" << curr->day << "\", \"high\": " << curr->high << ", \"low\": " << curr->low << "}";
+        if(curr->next) ss << ",";
+        curr = curr->next;
+    }
+    ss << "],";
 
-    // SERAIKISTAN
-    engine.addCity({"Seraikistan", 29.3, 71.6, 41, 15, 6, "Scorching",
-        {37,38,39,41,43,44,43,42,41,40,39,38,37,37,38,39,40,41,42,43,44,43,42,41},
-        {39,41,40,42,43,41,40},
-        {37,39,41,44,47,49,47,45,43,41,39,37,34,31,29,31,34,37,39,41,43,44,43,41,39,37,35,34,37,39},
-        {14, 18, 24, 31, 36, 38, 36, 34, 33, 29, 22, 16},
-        hotForecast
-    });
+    vector<City> all = tree.getAll();
+    for(size_t i=0; i<all.size()-1; i++) {
+        for(size_t j=0; j<all.size()-i-1; j++) {
+            if(all[j].temp < all[j+1].temp) swap(all[j], all[j+1]);
+        }
+    }
 
-    // ... (Graph Routes and Alerts remain the same) ...
-    // Note: I truncated the rest of the routes/alerts logic here for brevity, 
-    // but you should keep the routes you had in the previous file.
-    engine.addRoute("Islamabad", "Peshawar");
-    engine.addRoute("Islamabad", "Lahore");
-    engine.addRoute("Islamabad", "Topi"); 
-    engine.addRoute("Peshawar", "Topi");
-    engine.addRoute("Lahore", "Multan");
-    engine.addRoute("Multan", "Seraikistan");
-    engine.addRoute("Karachi", "Seraikistan");
+    ss << "\"hottest_cities\": [";
+    for(size_t i=0; i<all.size(); i++) {
+        ss << "{\"name\": \"" << all[i].name << "\", \"temp\": " << all[i].temp << "}";
+        if(i < all.size()-1) ss << ",";
+    }
+    ss << "] }";
+    
+    return ss.str();
+}
+
+// ==========================================
+// 5. SERVER
+// ==========================================
+string loadHTML() {
+    ifstream f("index.html");
+    if(f) { stringstream b; b << f.rdbuf(); return b.str(); }
+    return "<h1>Error: Missing index.html</h1>";
+}
+
+void handle(SOCKET s) {
+    char buf[4096] = {0};
+    int val = recv(s, buf, 4096, 0);
+    if(val > 0) {
+        string req(buf);
+        if(req.find("GET /data") != string::npos) {
+            string name = "Topi";
+            size_t p = req.find("city=");
+            if(p != string::npos) {
+                size_t e = req.find(" ", p);
+                name = req.substr(p+5, e-(p+5));
+            }
+            string json = getJSON(name);
+            string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n" + json;
+            send(s, resp.c_str(), resp.length(), 0);
+        } else if(req.find("GET / ") != string::npos || req.find("GET /index.html") != string::npos) {
+            string html = loadHTML();
+            string resp = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" + html;
+            send(s, resp.c_str(), resp.length(), 0);
+        }
+    }
+    closesocket(s);
 }
 
 int main() {
-    SimpleServer::initWinsock();
-    loadDummyData(); 
-
-    SOCKET serverSock = socket(AF_INET, SOCK_STREAM, 0);
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(8080);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-
-    bind(serverSock, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-    listen(serverSock, 10);
-
-    cout << "DSA Weather Server running on http://localhost:8080" << endl;
-
-    while (true) {
-        SOCKET clientSock = accept(serverSock, nullptr, nullptr);
-        thread(handleClient, clientSock).detach();
+    loadData();
+    WSADATA w; WSAStartup(MAKEWORD(2,2), &w);
+    SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in a; a.sin_family=AF_INET; a.sin_port=htons(8080); a.sin_addr.s_addr=INADDR_ANY;
+    bind(s, (sockaddr*)&a, sizeof(a));
+    listen(s, 5);
+    cout << "SERVER RUNNING: http://localhost:8080" << endl;
+    while(true) {
+        SOCKET c = accept(s, 0, 0);
+        if(c != INVALID_SOCKET) thread(handle, c).detach();
     }
-    
     return 0;
 }

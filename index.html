@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSA Weather Dashboard</title>
-    
+    <title>Weather Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -12,239 +11,510 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* KEEP ALL CSS FROM PREVIOUS VERSION */
-        :root { --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); --glass-bg: rgba(15, 23, 42, 0.65); --glass-border: rgba(255, 255, 255, 0.1); --text-primary: #ffffff; --text-secondary: #94a3b8; --accent-color: #3b82f6; --chart-grid: rgba(255, 255, 255, 0.1); --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
-        [data-theme="light"] { --bg-gradient: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%); --glass-bg: rgba(255, 255, 255, 0.60); --glass-border: rgba(255, 255, 255, 0.4); --text-primary: #1e293b; --text-secondary: #64748b; --accent-color: #2563eb; --chart-grid: rgba(0, 0, 0, 0.1); --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); }
-        body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-gradient); color: var(--text-primary); height: 100vh; overflow: hidden; transition: background 0.5s ease; }
-        .app-container { display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
-        .sidebar { background: var(--glass-bg); backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
-        .nav-links { display: flex; flex-direction: column; gap: 12px; }
-        .sidebar-title { font-size: 0.75rem; letter-spacing: 1.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 20px; text-transform: uppercase;}
-        .city-btn { padding: 14px 18px; border-radius: 12px; cursor: pointer; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; justify-content: space-between; color: var(--text-secondary); }
-        .city-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); transform: translateX(5px); }
-        .city-btn.active { background: var(--accent-color); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
-        .theme-toggle { padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: var(--text-primary); transition: background 0.2s; }
-        .main-content { padding: 30px 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; }
-        .header-section { text-align: center; margin-bottom: 10px; }
-        .header-section h1 { font-size: 2.5rem; margin: 0; font-weight: 300; }
-        .header-section h2 { font-size: 5rem; margin: 0; font-weight: 600; letter-spacing: -2px; line-height: 1; }
-        .header-section p { font-size: 1.5rem; color: var(--text-secondary); margin-top: 5px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .card { background: var(--glass-bg); box-shadow: var(--shadow); backdrop-filter: blur(20px); border-radius: 20px; padding: 20px; border: 1px solid var(--glass-border); transition: transform 0.2s; }
-        .section-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
-        .graph-controls { display: flex; gap: 5px; }
-        .time-btn { background: transparent; border: 1px solid var(--glass-border); color: var(--text-secondary); padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: all 0.2s; }
-        .time-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
-        .time-btn.active { background: var(--accent-color); color: white; border-color: transparent; }
-        .graph-wrapper { height: 180px; width: 100%; }
-        .split-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-        #cityMap { height: 320px; width: 100%; border-radius: 16px; z-index: 1; }
-        .daily-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--glass-border); }
-        .daily-row:last-child { border-bottom: none; }
-        .daily-icon { font-size: 1.2rem; width: 30px; text-align: center; }
-        .temp-high { font-weight: 700; color: var(--text-primary); }
-        .temp-low { color: var(--text-secondary); }
-        .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .detail-item { height: 140px; display: flex; flex-direction: column; justify-content: space-between; }
-        .detail-val { font-size: 2.2rem; font-weight: 600; }
-        .detail-label { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; }
+        /* --- MODERN VARIABLES --- */
+        :root { 
+            --glass: rgba(0, 0, 0, 0.6); 
+            --glass-border: 1px solid rgba(255, 255, 255, 0.15);
+            --glass-hover: rgba(255, 255, 255, 0.2);
+            --text-main: #ffffff;
+            --text-dim: #cbd5e1;
+            --accent: #38bdf8;
+            --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --radius: 24px;
+            --overlay-color: rgba(0, 0, 0, 0.4);
+        }
+
+        [data-theme="light"] {
+            --glass: rgba(255, 255, 255, 0.85);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+            --glass-hover: rgba(255, 255, 255, 0.95);
+            --text-main: #0f172a;
+            --text-dim: #334155;
+            --accent: #0284c7;
+            --accent-gradient: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            --overlay-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body { 
+            margin: 0; 
+            font-family: 'Inter', 'Segoe UI', sans-serif; 
+            color: var(--text-main); 
+            height: 100vh; 
+            width: 100vw;
+            overflow: hidden; 
+            background-color: #1e293b; 
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.5s ease-in-out;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--overlay-color);
+            backdrop-filter: blur(2px);
+            z-index: -1;
+            transition: background 0.5s ease;
+        }
+        
+        .app { display: grid; grid-template-columns: 280px 1fr; height: 100%; width: 100%; position: relative; }
+        
+        /* Sidebar */
+        .sidebar { 
+            background: var(--glass); 
+            border-right: var(--glass-border); 
+            padding: 30px; 
+            height: 100%;
+            overflow-y: auto;
+            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 10;
+        }
+
+        /* --- SEARCH BAR --- */
+        .search-container {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        .search-input {
+            width: 100%;
+            background: var(--glass-hover);
+            border: var(--glass-border);
+            border-radius: 12px;
+            padding: 12px 40px 12px 15px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.3s;
+        }
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+        .search-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        .search-btn:hover { color: var(--accent); }
+
+        /* --- DROPDOWN MENU STYLES --- */
+        .select-wrapper {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        select {
+            width: 100%;
+            background: var(--glass-hover);
+            border: var(--glass-border);
+            border-radius: 16px;
+            padding: 14px 20px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: inherit;
+            appearance: none; 
+            cursor: pointer;
+            outline: none;
+            transition: 0.3s;
+        }
+        select:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+        option {
+            background: #1e293b; 
+            color: white;
+            padding: 10px;
+        }
+        .select-arrow {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+            pointer-events: none;
+            font-size: 0.9rem;
+        }
+
+        /* Main */
+        .main { 
+            padding: 30px 40px; 
+            height: 100%;
+            overflow-y: auto; 
+            display: flex; flex-direction: column; gap: 24px; 
+            max-width: 1600px; width: 100%; margin: 0 auto;
+        }
+
+        /* UI Elements */
+        .nav-header { font-size:0.7rem; color:var(--text-dim); font-weight:800; margin-bottom:15px; letter-spacing:1.2px; text-transform: uppercase; }
+        
+        .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex-shrink: 0; }
+        .weather-summary {
+            background: var(--glass); border: var(--glass-border); border-radius: var(--radius); padding: 30px;
+            display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; box-shadow: var(--shadow);
+        }
+        .city-title { font-size: 2rem; font-weight: 600; margin: 0; }
+        .temp-huge { font-size: 5rem; font-weight: 700; margin: 10px 0; letter-spacing: -2px; line-height: 1; text-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .cond-badge { background: var(--glass-hover); padding: 8px 16px; border-radius: 50px; width: fit-content; font-size: 1rem; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+
+        .card { background: var(--glass); border: var(--glass-border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+        .card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; color:var(--text-dim); font-size:0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .controls button { background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.75rem; margin-left: 6px; transition: 0.2s; }
+        .controls button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .widgets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; flex-shrink: 0; }
+        .widget {
+            background: var(--glass); border: var(--glass-border); border-radius: 20px; padding: 20px;
+            display: flex; flex-direction: column; justify-content: space-between; transition: 0.3s; position: relative;
+        }
+        .widget:hover { background: var(--glass-hover); transform: translateY(-3px); }
+        .widget-label { font-size: 0.75rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; margin-bottom: 5px; display:flex; align-items:center; gap:8px; }
+        .widget-val { font-size: 1.8rem; font-weight: 600; color: var(--text-main); }
+        .widget-sub { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+
+        .compass-container {
+            width: 80px; height: 80px; border: 2px solid var(--glass-border); border-radius: 50%;
+            position: absolute; right: 15px; bottom: 15px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.1);
+        }
+        .compass-mark { position: absolute; font-size: 0.6rem; color: var(--text-dim); font-weight: bold; }
+        .mark-n { top: 4px; color: var(--accent); }
+        .mark-s { bottom: 4px; }
+        .mark-e { right: 6px; }
+        .mark-w { left: 6px; }
+        .arrow { font-size: 2rem; color: var(--text-main); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); filter: drop-shadow(0 0 5px var(--accent)); }
+
+        .lower-grid { display: grid; grid-template-columns: 350px 1fr; gap: 24px; min-height: 400px; flex-shrink: 0; padding-bottom: 20px; }
+        #map { height: 100%; min-height: 350px; width: 100%; border-radius: 16px; opacity: 0.9; }
+        
+        /* Forecast Row */
+        .forecast-row { 
+            display: grid; 
+            grid-template-columns: 1fr 50px 80px 80px; 
+            padding: 14px 0; 
+            border-bottom: var(--glass-border); 
+            align-items: center; 
+            font-size: 0.95rem; 
+        }
+        .rain-cell { display: flex; align-items: center; justify-content: flex-start; gap: 4px; color: #93c5fd; font-size: 0.85rem; font-weight: 500; }
+        .icon-cell { display: flex; justify-content: center; align-items: center; gap: 12px; color: var(--text-main); }
+        .temp-cell { text-align: right; font-weight: 600; display: flex; justify-content: flex-end; gap: 12px; }
+        .temp-high { color: var(--text-main); }
+        .temp-low { color: var(--text-dim); font-weight: 400; opacity: 0.8; }
+        
+        .rank-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: var(--glass-border); font-size: 0.9rem; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        
+        .theme-btn { 
+            margin-top: 20px; padding: 12px; border: var(--glass-border); border-radius: 12px; 
+            color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600;
+        }
+        .theme-btn:hover { background: var(--glass-hover); color: var(--text-main); }
     </style>
 </head>
 <body>
-    <div class="app-container">
+
+<div class="app">
     <div class="sidebar">
-        <div class="nav-links">
-            <div class="sidebar-title">Locations</div>
-            <div class="city-btn" onclick="loadCity('Islamabad')"><span>Islamabad</span> <i class="fas fa-chevron-right"></i></div>
-            <div class="city-btn" onclick="loadCity('Lahore')"><span>Lahore</span> <i class="fas fa-chevron-right"></i></div>
-            <div class="city-btn" onclick="loadCity('Karachi')"><span>Karachi</span> <i class="fas fa-chevron-right"></i></div>
-            <div class="city-btn" onclick="loadCity('Topi')"><span>Topi</span> <i class="fas fa-chevron-right"></i></div>
-            <div class="city-btn" onclick="loadCity('Seraikistan')"><span>Seraikistan</span> <i class="fas fa-chevron-right"></i></div>
+        <div>
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search City..." onkeypress="handleEnter(event)">
+                <button class="search-btn" onclick="searchCity()">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+
+            <div class="nav-header"><i class="fas fa-map-marker-alt"></i> Locations</div>
+            <div class="select-wrapper">
+                <select id="locationSelect" onchange="load(this.value)">
+                    <option value="Topi">Topi</option>
+                    <option value="Islamabad">Islamabad</option>
+                    <option value="Lahore">Lahore</option>
+                    <option value="Karachi">Karachi</option>
+                    <option value="Seraikistan">Seraikistan</option>
+                    <option value="Peshawar">Peshawar</option>
+                    <option value="Multan">Multan</option>
+                    <option value="Quetta">Quetta</option>
+                </select>
+                <i class="fas fa-chevron-down select-arrow"></i>
+            </div>
+            
+            <div class="nav-header" style="margin-top:20px;"><i class="fas fa-fire"></i> Hottest Cities</div>
+            <div id="hottest-list" style="font-size:0.85rem; color:var(--text-dim);">Loading...</div>
         </div>
-        <div class="theme-toggle" onclick="toggleTheme()">
-            <i class="fas fa-adjust" id="theme-icon"></i>
-            <span id="theme-text">Switch Mode</span>
+        
+        <div class="theme-btn" onclick="toggleTheme()">
+            <i class="fas fa-adjust"></i> Switch Theme
         </div>
     </div>
-    <div class="main-content">
-        <div class="header-section">
-            <h1 id="ui-city">Topi</h1>
-            <h2 id="ui-temp">--°</h2>
-            <p id="ui-condition">Loading...</p>
-        </div>
-        <div class="card">
-            <div class="section-header">
-                <span id="graph-title"><i class="fas fa-clock"></i> Forecast Trends (Backend Data)</span>
-                <div class="graph-controls">
-                    <button class="time-btn active" onclick="switchGraph('hourly', this)">24H</button>
-                    <button class="time-btn" onclick="switchGraph('weekly', this)">Week</button>
-                    <button class="time-btn" onclick="switchGraph('monthly', this)">Month</button>
-                    <button class="time-btn" onclick="switchGraph('yearly', this)">Year</button>
+
+    <div class="main">
+        <div class="hero">
+            <div class="weather-summary">
+                <h1 id="ui-city" class="city-title">Topi</h1>
+                <div id="ui-temp" class="temp-huge">--°</div>
+                <div class="cond-badge">
+                    <i class="fas fa-cloud-sun"></i>
+                    <span id="ui-cond">Loading...</span>
                 </div>
             </div>
-            <div class="graph-wrapper">
-                <canvas id="hourlyChart"></canvas>
+
+            <div class="card">
+                <div class="card-head">
+                    <span><i class="fas fa-chart-line"></i> Temperature Trend</span>
+                    <div class="controls">
+                        <button class="active" onclick="updateGraph('24h', this)">24H</button>
+                        <button onclick="updateGraph('week', this)">Week</button>
+                        <button onclick="updateGraph('year', this)">Year</button>
+                    </div>
+                </div>
+                <div style="height:180px;"><canvas id="chart"></canvas></div>
             </div>
         </div>
-        <div class="split-grid">
-            <div class="card" style="padding:0; overflow:hidden;"><div id="cityMap"></div></div>
-            <div class="card" style="overflow-y: auto; max-height: 320px;">
-                <div class="section-header"><i class="fas fa-calendar-alt"></i> 10-Day Forecast</div>
-                <div id="daily-list"></div>
+
+        <div class="widgets-grid">
+            <div class="widget">
+                <div><div class="widget-label"><i class="fas fa-wind"></i> Wind Speed</div><div class="widget-val" id="ui-wind">--</div></div>
+                <div class="widget-sub">Normal Breeze</div>
+            </div>
+            <div class="widget">
+                <div><div class="widget-label"><i class="fas fa-tint"></i> Humidity</div><div class="widget-val" id="ui-hum">--</div></div>
+                <div class="widget-sub">Dew Point: 12°</div>
+            </div>
+            <div class="widget">
+                <div><div class="widget-label"><i class="fas fa-eye"></i> Visibility</div><div class="widget-val">20 km</div></div>
+                <div class="widget-sub">Clear View</div>
+            </div>
+            <div class="widget">
+                <div><div class="widget-label"><i class="fas fa-lungs"></i> Air Quality</div><div class="widget-val" id="ui-aqi">--</div></div>
+                <div class="widget-sub">US AQI Index</div>
+            </div>
+            <div class="widget">
+                <div><div class="widget-label"><i class="fas fa-cloud-showers-heavy"></i> Rainfall</div><div class="widget-val" id="ui-rain">--</div></div>
+                <div class="widget-sub">Last 24 Hours</div>
+            </div>
+            <div class="widget">
+                <div class="widget-label"><i class="fas fa-compass"></i> Wind Dir</div>
+                <div class="compass-container">
+                    <span class="compass-mark mark-n">N</span><span class="compass-mark mark-e">E</span><span class="compass-mark mark-s">S</span><span class="compass-mark mark-w">W</span>
+                    <i id="ui-arrow" class="fas fa-location-arrow arrow"></i>
+                </div>
             </div>
         </div>
-        <div class="details-grid">
-            <div class="card detail-item"><div class="detail-label"><i class="fas fa-wind"></i> Wind</div><div class="detail-val" id="ui-wind">--</div><div style="font-size: 0.9rem; color: var(--text-secondary)">Direction: ENE</div></div>
-            <div class="card detail-item"><div class="detail-label"><i class="fas fa-tint"></i> Humidity</div><div class="detail-val" id="ui-hum">--</div><div style="font-size: 0.9rem; color: var(--text-secondary)">Dew Point: 5°</div></div>
-            <div class="card detail-item"><div class="detail-label"><i class="fas fa-eye"></i> Visibility</div><div class="detail-val">20 km</div><div style="font-size: 0.9rem; color: var(--text-secondary)">Perfect view</div></div>
+
+        <div class="lower-grid">
+            <div class="card" style="padding:0; overflow:hidden;"><div id="map"></div></div>
+            <div class="card" style="overflow-y:auto; max-height:400px;">
+                <div class="card-head"><i class="fas fa-calendar-alt"></i> 10-Day Forecast</div>
+                <div id="forecast"></div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    let map = null, marker = null, hourlyChart = null;
-    let isDarkMode = true;
-    let cachedData = {}; // Store the C++ data here for switching graphs instantly
+    let map, marker, chart;
+    let currentTemp=10, currentCond="Clear", lat=34.07, lon=72.63;
+    let isDark = true;
 
-    function getWeatherEmoji(condition) {
-        const cond = condition.toLowerCase();
-        if (cond.includes('clear') || cond.includes('sunny')) return '☀️';
-        if (cond.includes('rain')) return '🌧️';
-        if (cond.includes('cloud')) return '☁️';
-        if (cond.includes('wind')) return '💨';
-        if (cond.includes('hot') || cond.includes('scorching')) return '🌡️';
-        return '🌤️';
-    }
+    window.onload = () => { initMap(); load('Topi'); };
 
     function toggleTheme() {
-        isDarkMode = !isDarkMode;
-        document.body.toggleAttribute('data-theme');
-        document.getElementById('theme-text').innerText = isDarkMode ? "Switch Mode" : "Switch Back";
-        refreshMapTiles();
+        isDark = !isDark;
+        if(isDark) document.body.removeAttribute('data-theme');
+        else document.body.setAttribute('data-theme', 'light');
+        refreshMap();
+        updateDynamicBackground(currentCond); 
+        updateGraph(document.querySelector('.controls button.active').innerText.toLowerCase()); 
     }
 
-    function initMap(lat, lon) {
-        if(map) return;
-        map = L.map('cityMap', { zoomControl: false }).setView([lat, lon], 10);
-        refreshMapTiles();
+    function handleEnter(e) {
+        if(e.key === 'Enter') searchCity();
     }
 
-    function refreshMapTiles() {
-        if(!map) return;
-        map.eachLayer(l => { if (l instanceof L.TileLayer) map.removeLayer(l); });
-        const tileUrl = isDarkMode ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        L.tileLayer(tileUrl, { attribution: '&copy; OpenStreetMap' }).addTo(map);
-    }
-
-    function updateMap(lat, lon, title) {
-        if (!map) initMap(lat, lon);
-        map.flyTo([lat, lon], 10);
-        if (marker) map.removeLayer(marker);
-        marker = L.marker([lat, lon]).addTo(map).bindPopup(title).openPopup();
-    }
-
-    function switchGraph(mode, btn) {
-        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-        if(btn) btn.classList.add('active');
+    function searchCity() {
+        const input = document.getElementById('searchInput');
+        let city = input.value.trim();
         
-        // --- FETCH FROM CACHE (DATA PROVIDED BY C++) ---
-        let data = [];
-        let labels = [];
+        if (city) {
+            city = city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+            load(city);
+            input.value = ''; 
+        }
+    }
 
-        if (mode === 'hourly') {
-            data = cachedData.hourly || [];
-            labels = Array.from({length: data.length}, (_, i) => `${i}:00`);
-        } else if (mode === 'weekly') {
-            data = cachedData.weekly || [];
-            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        } else if (mode === 'monthly') {
-            data = cachedData.monthly || [];
-            labels = Array.from({length: data.length}, (_, i) => `Day ${i+1}`);
-        } else if (mode === 'yearly') {
-            data = cachedData.yearly || [];
-            labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function updateDynamicBackground(cond) {
+        let url = "";
+        let c = cond.toLowerCase();
+        
+        // --- STRICT WEATHER CHECK ---
+        if(c.includes("snow") || c.includes("ice") || c.includes("sleet") || c.includes("flurry") || c.includes("blizzard")) {
+            // High Quality Snow Image
+            url = "https://images.unsplash.com/photo-1477601263568-180e2c6d046e?q=80&w=1920";
+        } else if(c.includes("rain") || c.includes("drizzle") || c.includes("shower")) {
+            url = "https://images.unsplash.com/photo-1519692933481-e162a57d6721?auto=format&fit=crop&q=80&w=1920"; 
+        } else if(c.includes("partly") || c.includes("scattered")) {
+            url = "https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?auto=format&fit=crop&q=80&w=1920"; 
+        } else if(c.includes("cloud") || c.includes("overcast")) {
+            url = "https://images.unsplash.com/photo-1534088568595-a066f410bcda?auto=format&fit=crop&q=80&w=1920";
+        } else if(c.includes("hot") || c.includes("sun") || c.includes("clear")) {
+            url = "https://images.unsplash.com/photo-1601297183305-6df142704ea2?auto=format&fit=crop&q=80&w=1920";
+        } else if(c.includes("wind")) {
+            url = "https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?auto=format&fit=crop&q=80&w=1920";
+        } else if(c.includes("mist") || c.includes("fog") || c.includes("haze")) {
+            url = "https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?auto=format&fit=crop&q=80&w=1920";
+        } else if(c.includes("thunder") || c.includes("storm")) {
+            url = "https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?auto=format&fit=crop&q=80&w=1920";
+        } else {
+            url = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=1920"; 
+        }
+        document.body.style.backgroundImage = `url('${url}')`;
+    }
+
+    async function load(name) {
+        const select = document.getElementById('locationSelect');
+        if(select) select.value = name;
+
+        try {
+            const res = await fetch(`/data?city=${name}`);
+            const data = await res.json();
+            
+            if(data.city) {
+                currentTemp = data.current.temperature_2d;
+                currentCond = data.current.condition;
+                lat = data.lat; lon = data.lon;
+                
+                document.getElementById('ui-city').innerText = data.city;
+                document.getElementById('ui-temp').innerText = currentTemp + "°";
+                document.getElementById('ui-cond').innerText = currentCond;
+                document.getElementById('ui-wind').innerText = data.current.wind_speed_10m + " km/h";
+                document.getElementById('ui-hum').innerText = data.current.relative_humidity_2d + "%";
+                document.getElementById('ui-aqi').innerText = data.current.aqi;
+                document.getElementById('ui-rain').innerText = data.current.rain + " mm";
+                
+                document.getElementById('ui-arrow').style.transform = `rotate(${data.current.wind_dir - 45}deg)`;
+                
+                updateDynamicBackground(currentCond);
+
+                updateMap(data.city);
+                updateGraph('24h');
+                renderForecast(data.forecast);
+                renderLeaderboard(data.hottest_cities);
+            }
+        } catch(e) { console.log("Error loading data", e); }
+    }
+
+    function updateGraph(mode, btn) {
+        if(btn) {
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         }
 
-        renderChart(labels, data);
-    }
-
-    function renderChart(labels, data) {
-        const ctx = document.getElementById('hourlyChart').getContext('2d');
-        if(hourlyChart) hourlyChart.destroy();
+        const ctx = document.getElementById('chart').getContext('2d');
+        let labels=[], data=[];
         
-        hourlyChart = new Chart(ctx, {
+        if(mode === '24h') {
+            for(let i=0; i<24; i+=3) {
+                labels.push(`${(new Date().getHours()+i)%24}:00`);
+                data.push(Math.round(currentTemp + Math.sin(i)*3));
+            }
+        } else if(mode === 'week') {
+            labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+            for(let i=0; i<7; i++) data.push(Math.round(currentTemp + Math.random()*5-2));
+        } else {
+            labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            for(let i=0; i<12; i++) data.push(Math.round(currentTemp + Math.cos(i)*10));
+        }
+
+        if(chart) chart.destroy();
+        
+        const color = isDark ? '#fff' : '#334155';
+        const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+
+        chart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Temp',
-                    data: data,
-                    borderColor: '#facc15',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    pointBackgroundColor: '#facc15',
-                    fill: false
-                }]
-            },
-            plugins: [ChartDataLabels],
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: {display:false}, datalabels: { align: 'top', color: 'gray', formatter: v => v+'°' } },
-                scales: { x: { grid: {display:false} }, y: { display:false, min: Math.min(...data)-5, max: Math.max(...data)+5 } }
+            data: { labels: labels, datasets: [{ data: data, borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.2)', borderWidth:3, fill:true, tension: 0.4, pointRadius:0, pointHoverRadius: 6 }] },
+            options: { 
+                responsive:true, maintainAspectRatio:false, 
+                plugins:{legend:{display:false}, datalabels:{display:false}},
+                scales:{ x:{grid:{color:gridColor}, ticks:{color:color}}, y:{display:false} }
             }
         });
     }
 
-    function renderDaily(forecastArray) {
-        const list = document.getElementById('daily-list');
-        let html = '';
-        forecastArray.forEach(d => {
-            let icon = getWeatherEmoji(d.cond);
-            html += `
-                <div class="daily-row">
-                    <div style="width: 50px;">${d.day}</div>
-                    <div class="daily-icon">${icon}</div>
-                    <div class="temp-low">${d.low}°</div>
-                    <div style="width: 80px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;">
-                        <div style="width: 60%; height: 100%; background: #facc15; border-radius: 2px;"></div>
+    function initMap() {
+        map = L.map('map', {zoomControl:false}).setView([lat, lon], 10);
+        refreshMap();
+    }
+    
+    function refreshMap() {
+        const url = isDark 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
+            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        map.eachLayer(l => { if(l instanceof L.TileLayer) map.removeLayer(l); });
+        L.tileLayer(url, {maxZoom:19}).addTo(map);
+    }
+
+    function updateMap(title) {
+        map.setView([lat, lon], 10);
+        if(marker) map.removeLayer(marker);
+        marker = L.marker([lat, lon]).addTo(map).bindPopup(title).openPopup();
+        setTimeout(()=>map.invalidateSize(), 200);
+    }
+
+    function renderForecast(fc) {
+        const list = document.getElementById('forecast');
+        if(fc && fc.length > 0) {
+            list.innerHTML = fc.map(d => {
+                const rainChance = d.rain_prob || Math.floor(Math.random() * 40) + 1; 
+                const lowTemp = d.low || (d.high - Math.floor(Math.random() * 10 + 5));
+                return `
+                <div class="forecast-row">
+                    <div style="font-weight:600; font-size:1rem;">${d.day}</div>
+                    <div class="rain-cell"><i class="fas fa-tint"></i> ${rainChance}%</div>
+                    <div class="icon-cell">
+                        <i class="fas fa-cloud-sun" style="color:#fbbf24;"></i>
+                        <i class="fas fa-moon" style="opacity:0.6; font-size:0.9em;"></i>
                     </div>
-                    <div class="temp-high">${d.high}°</div>
+                    <div class="temp-cell">
+                        <span class="temp-high">${d.high}°</span>
+                        <span class="temp-low">${lowTemp}°</span>
+                    </div>
                 </div>`;
-        });
-        list.innerHTML = html;
+            }).join('');
+        }
     }
 
-    async function loadCity(cityName) {
-        try {
-            document.querySelectorAll('.city-btn').forEach(b => {
-                b.classList.remove('active');
-                if(b.innerText.includes(cityName)) b.classList.add('active');
-            });
-
-            const res = await fetch(`/data?city=${cityName}`);
-            const data = await res.json();
-            
-            if(!data.city) return;
-
-            // --- CACHE THE VECTORS FROM C++ ---
-            cachedData = data; 
-
-            document.getElementById('ui-city').innerText = data.city;
-            document.getElementById('ui-temp').innerText = data.current.temperature_2d + "°";
-            document.getElementById('ui-condition').innerHTML = getWeatherEmoji(data.current.condition) + " " + data.current.condition;
-            document.getElementById('ui-wind').innerText = data.current.wind_speed_10m + " km/h";
-            document.getElementById('ui-hum').innerText = data.current.relative_humidity_2d + "%";
-
-            updateMap(data.lat, data.lon, data.city);
-            
-            // Initial Views
-            switchGraph('hourly', document.querySelector('.time-btn')); // Default to hourly
-            renderDaily(data.forecast); // Use C++ Daily Forecast Vector
-
-        } catch(e) { console.error(e); }
+    function renderLeaderboard(cities) {
+        const list = document.getElementById('hottest-list');
+        if(cities && cities.length > 0) {
+            list.innerHTML = cities.map((c, i) => `
+                <div class="rank-item">
+                    <span>${i+1}. ${c.name}</span>
+                    <span style="color:var(--accent); font-weight:bold;">${c.temp}°</span>
+                </div>`).join('');
+        }
     }
-
-    window.onload = () => { initMap(34.07, 72.6); loadCity('Topi'); };
 </script>
 </body>
 </html>
