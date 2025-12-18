@@ -13,28 +13,27 @@
 
 // --- DATA MODELS ---
 
-// New Struct for Daily Forecast (DSA: Struct/Object)
 struct DailyForecast {
     std::string dayName;
     int high;
     int low;
-    std::string condition; // e.g., "Sunny", "Rainy"
+    std::string condition;
 };
 
 struct City {
     std::string name;
     double lat, lon;
     int temp, humidity, wind;
+    int wind_dir; // <--- NEW: Stores wind direction (0-360 degrees)
     std::string condition;
     
-    // --- DSA: VECTORS FOR TIME-SERIES DATA ---
-    // Instead of generating these in JS, we store them here.
-    std::vector<int> hourlyData;  // 24 points
-    std::vector<int> weeklyData;  // 7 points
-    std::vector<int> monthlyData; // 30 points
-    std::vector<int> yearlyData;  // 12 points
+    // --- DSA: VECTORS FOR TIME-SERIES ---
+    std::vector<int> hourlyData; // dynamic array vector stores contiguous sequences of temperature integers for efficient iteration
+    std::vector<int> weeklyData;
+    std::vector<int> monthlyData;
+    std::vector<int> yearlyData;
 
-    // --- DSA: VECTOR FOR FORECAST OBJECTS ---
+    // --- DSA: FORECAST OBJECTS ---
     std::vector<DailyForecast> tenDayForecast;
 };
 
@@ -52,10 +51,18 @@ struct Alert {
 // --- THE ENGINE CLASS ---
 class WeatherEngine {
 private:
-    std::unordered_map<std::string, City> cityDatabase;
-    std::unordered_map<std::string, std::vector<std::string>> cityGraph;
-    std::priority_queue<Alert> alertSystem;
-    std::stack<std::string> requestLogs;
+    // DSA 1: Hash Map
+    std::unordered_map<std::string, City> cityDatabase; // hash map provides constant time lookup for city data objects using string keys
+
+    // DSA 2: Graph (Adjacency List)
+    std::unordered_map<std::string, std::vector<std::string>> cityGraph; // adjacency list implementation uses a map of vectors to represent graph connections between cities
+
+    // DSA 3: Max-Heap (Priority Queue)
+    std::priority_queue<Alert> alertSystem; // max-heap priority queue automatically orders alerts so the highest severity is always at the top
+
+    // DSA 4: Stack
+    std::stack<std::string> requestLogs; // stack data structure follows last-in-first-out logic to store the history of server requests
+
     std::mutex engineMutex;
 
 public:
@@ -73,7 +80,7 @@ public:
 
     void addRoute(const std::string& cityA, const std::string& cityB) {
         std::lock_guard<std::mutex> lock(engineMutex);
-        cityGraph[cityA].push_back(cityB);
+        cityGraph[cityA].push_back(cityB); // graph edge insertion adds a connection between two nodes in the adjacency list
         cityGraph[cityB].push_back(cityA); 
     }
 
@@ -86,7 +93,7 @@ public:
 
     void addAlert(int severity, std::string msg, std::string city) {
         std::lock_guard<std::mutex> lock(engineMutex);
-        alertSystem.push({severity, msg, city});
+        alertSystem.push({severity, msg, city}); // heap insertion adds an element and rebalances the tree based on the severity comparison
     }
 
     std::vector<Alert> getTopAlerts(int k) {
@@ -109,6 +116,7 @@ public:
         }
         if (k > allCities.size()) k = allCities.size();
         
+        // sorting algorithm rearranges only the top k elements to optimize ranking performance
         std::partial_sort(allCities.begin(), allCities.begin() + k, allCities.end(), 
             [](const City& a, const City& b) {
                 return a.temp > b.temp; 
@@ -120,7 +128,7 @@ public:
 
     void logRequest(std::string req) {
         std::lock_guard<std::mutex> lock(engineMutex);
-        requestLogs.push(req);
+        requestLogs.push(req); // stack push operation places the most recent request string onto the top of the log history
         if(requestLogs.size() > 50) requestLogs.pop();
     }
 };
