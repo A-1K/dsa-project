@@ -78,6 +78,17 @@
             text-transform: uppercase;
         }
 
+        .endpoint {
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 999px;
+            padding: 5px 8px;
+            color: var(--accent);
+            background: rgba(56, 189, 248, 0.08);
+            font-family: Consolas, monospace;
+            font-size: 0.72rem;
+            white-space: nowrap;
+        }
+
         .input, .select {
             width: 100%;
             border: 1px solid var(--line);
@@ -113,6 +124,11 @@
         .route-form {
             display: grid;
             gap: 10px;
+        }
+
+        .route-form.inline {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            align-items: end;
         }
 
         .chip-list {
@@ -408,6 +424,7 @@
             .sidebar { position: static; height: auto; }
             .hero, .grid { grid-template-columns: 1fr; }
             .meta-grid, .forecast-grid { grid-template-columns: repeat(2, 1fr); }
+            .route-form.inline { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 560px) {
@@ -429,24 +446,13 @@
             <label class="label" for="city-select">City Lookup</label>
             <select id="city-select" class="select"></select>
 
-            <label class="label" for="city-search">Trie Autocomplete</label>
+            <label class="label" for="city-search">Trie Autocomplete <span class="endpoint">GET /api/suggest</span></label>
             <input id="city-search" class="input" list="suggestions" placeholder="Type a city name">
             <datalist id="suggestions"></datalist>
             <button class="button" style="margin-top:10px" id="search-btn">Load City</button>
 
             <label class="label">Graph Neighbors</label>
             <div id="neighbor-list" class="chip-list"></div>
-
-            <label class="label">Route Planner</label>
-            <div class="route-form">
-                <select id="from-select" class="select"></select>
-                <select id="to-select" class="select"></select>
-                <select id="route-mode" class="select">
-                    <option value="safe">Dijkstra: lowest weather risk</option>
-                    <option value="bfs">BFS: fewest route hops</option>
-                </select>
-                <button class="button secondary" id="route-btn">Find Route</button>
-            </div>
         </aside>
 
         <main class="main">
@@ -493,6 +499,7 @@
                 <div class="panel">
                     <div class="panel-head">
                         <h3 class="panel-title">Priority Queue Alerts</h3>
+                        <span class="endpoint">GET /api/alerts</span>
                     </div>
                     <div class="list" id="alerts"></div>
                 </div>
@@ -500,6 +507,7 @@
                 <div class="panel">
                     <div class="panel-head">
                         <h3 class="panel-title">Partial Sort Rankings</h3>
+                        <span class="endpoint">GET /api/hottest</span>
                     </div>
                     <div class="list" id="rankings"></div>
                 </div>
@@ -507,8 +515,18 @@
                 <div class="panel">
                     <div class="panel-head">
                         <h3 class="panel-title">Graph Route Result</h3>
+                        <span class="endpoint">GET /api/route</span>
                     </div>
                     <div class="route-map">
+                        <div class="route-form inline">
+                            <select id="from-select" class="select" aria-label="Route starting city"></select>
+                            <select id="to-select" class="select" aria-label="Route destination city"></select>
+                            <select id="route-mode" class="select" aria-label="Route algorithm">
+                                <option value="safe">Dijkstra: lowest weather risk</option>
+                                <option value="bfs">BFS: fewest route hops</option>
+                            </select>
+                            <button class="button secondary" id="route-btn">Find Route</button>
+                        </div>
                         <div class="route-result" id="route-result">Choose two cities to compare BFS and Dijkstra route behavior.</div>
                         <div class="node-board" id="node-board"></div>
                     </div>
@@ -517,6 +535,7 @@
                 <div class="panel">
                     <div class="panel-head">
                         <h3 class="panel-title">Adjacency List</h3>
+                        <span class="endpoint">GET /api/weather</span>
                     </div>
                     <div class="list" id="adjacency"></div>
                 </div>
@@ -638,6 +657,7 @@
             await renderAlerts();
             await renderRankings();
             drawNodeBoard();
+            await findRoute();
         }
 
         function fillCitySelects(names) {
