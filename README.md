@@ -1,124 +1,123 @@
-# DSA Weather Analytics Dashboard
+# Pakistan Weather Dashboard
 
-A portfolio-ready C++17 weather analytics dashboard that demonstrates practical data structures and algorithms through a small REST-style weather server and an interactive browser UI.
+> A C++17 weather analytics server + interactive browser UI, built to show that the data structures you study in class can actually power something real.
 
 ![Dashboard preview](docs/screenshots/dashboard.png)
 
-## Why This Project Exists
+---
 
-This started as a DSA class project and has been upgraded into a GitHub/resume project. The goal is not to compete with production weather APIs, but to show that core DSA concepts can power a real, inspectable application: city lookup, route planning, weather ranking, alert prioritization, autocomplete, and request history.
+## The Story
 
-## Features
+This started as a DSA course project. The brief was *"implement a hash map and a graph"* — the kind of assignment where most people write a console app, print some output, and call it done.
 
-- C++17 HTTP server with REST-style API endpoints.
-- CSV-backed city weather dataset in `data/weather_data.csv`.
-- Interactive dashboard in `public/index.html`.
-- City weather lookup with forecast, humidity, wind, AQI, rain, and temperature trends.
-- Graph-based route planner:
-  - BFS for fewest route hops.
-  - Dijkstra for lowest weather-risk route.
-- Trie-backed city autocomplete.
-- Priority queue weather alerts.
-- Partial-sort hottest/coldest city rankings.
-- Lightweight C++ tests for the core engine.
-- Reproducible dashboard preview generator.
+I wanted to see what those structures look like when they're doing actual work. So instead of a console app, there's a C++ HTTP server. Instead of hard-coded nodes, there's a map of Pakistani cities with real coordinates. And instead of printing a path, there's a route planner that compares BFS against Dijkstra and tells you which road between Topi and Karachi has the lowest weather risk.
 
-## DSA Concepts Used
+It's not a production weather app. But every feature traces directly back to a data structure — and you can inspect all of it.
 
-| Concept | Where It Appears | Purpose |
-| --- | --- | --- |
-| Hash map | `cityDatabase` | O(1) average city lookup by name |
-| Graph adjacency list | `cityGraph` | Stores city-to-city weather routes |
-| BFS | `shortestRouteBfs` | Finds the route with the fewest hops |
-| Dijkstra | `safestRouteDijkstra` | Finds the lowest weather-risk route |
-| Priority queue / max heap | `alertSystem` | Returns most severe alerts first |
-| Trie | `autocomplete` | Fast prefix search for city names |
-| Vector | Time-series weather arrays | Stores hourly, weekly, monthly, yearly trends |
-| Partial sort | `getHottestCities`, `getColdestCities` | Efficient top-k ranking |
-| Stack-style log | `requestLogStack` | Keeps recent server requests |
+---
+
+## What It Does
+
+Search any of the 10 cities and you get live weather cards, hourly/weekly/monthly temperature charts, a 10-day forecast, and a wind compass. The more interesting parts are under the hood:
+
+- **Route Planner** — ask for the path from any city to any other. Pick *fewest hops* (BFS) or *lowest weather risk* (Dijkstra with composite edge weights from AQI, wind, rain delta, and temperature).
+- **Autocomplete** — the search box uses a Trie. Start typing "Is" and it suggests Islamabad in O(k) time, not O(n).
+- **Alert Feed** — a max-heap surfaces the most severe weather alerts first. No sorting on every read.
+- **Hot/Cold Rankings** — `std::partial_sort` to find the top-k cities without sorting the whole dataset.
+
+---
+
+## The DSA Layer
+
+Every structure here is doing a specific job, not just checking a box:
+
+| Structure | Lives In | Why It's Here |
+|---|---|---|
+| `unordered_map` | `cityDatabase` | O(1) average city lookup by name |
+| Adjacency list | `cityGraph` | Sparse graph — most cities connect to 2–4 others |
+| BFS | `shortestRouteBfs` | Unweighted shortest path (fewest hops) |
+| Dijkstra | `safestRouteDijkstra` | Weighted shortest path (lowest weather risk) |
+| Max-heap | `alertSystem` | Highest severity alert always at top, O(log n) insert |
+| Trie | `autocomplete` | Prefix search in O(prefix length), not O(cities) |
+| `std::vector` | Time-series data | Contiguous hourly/weekly/monthly/yearly arrays |
+| `std::partial_sort` | `getHottestCities` | Top-k in O(n log k), not O(n log n) |
+| `std::deque` | `requestLog` | O(1) push and pop on both ends for the request log |
+
+Edge weights in Dijkstra aren't arbitrary — `riskScore()` builds them from the average AQI, wind speed, temperature delta, and rainfall between two cities. Distances use the Haversine formula on real lat/lon coordinates.
+
+---
 
 ## Project Structure
 
-```text
+```
 .
-|-- CMakeLists.txt
-|-- data/
-|   `-- weather_data.csv
-|-- docs/
-|   `-- screenshots/
-|       `-- dashboard.png
-|-- include/
-|   |-- NetworkUtils.hpp
-|   `-- WeatherEngine.hpp
-|-- public/
-|   `-- index.html
-|-- src/
-|   `-- main.cpp
-|-- tests/
-|   `-- weather_engine_tests.cpp
-`-- tools/
-    `-- generate_dashboard_preview.ps1
+├── CMakeLists.txt
+├── data/
+│   └── weather_data.csv        # City data — edit this to add cities
+├── docs/screenshots/
+│   └── dashboard.png
+├── include/
+│   ├── WeatherEngine.hpp       # All DSA lives here
+│   └── NetworkUtils.hpp        # Thin WinSock2 HTTP wrapper
+├── public/
+│   └── index.html              # Frontend — works standalone too
+├── src/
+│   └── main.cpp                # Server, routing, JSON serialization
+└── tests/
+    └── weather_engine_tests.cpp
 ```
 
-## Build And Run
+---
 
-### Prerequisites
+## Build & Run
 
-- C++17 compiler
-- CMake 3.16+
-
-On Windows, install Visual Studio Build Tools or MinGW-w64. On macOS/Linux, install Clang or GCC.
-
-### Build
+**Requirements:** C++17 compiler, CMake 3.16+. On Windows use Visual Studio Build Tools or MinGW-w64.
 
 ```bash
 cmake -S . -B build
 cmake --build build
 ```
 
-### Run The Dashboard
-
 ```bash
+# Linux / macOS
 ./build/weather_dashboard
-```
 
-On Windows, the executable may be:
-
-```powershell
+# Windows
 .\build\Debug\weather_dashboard.exe
 ```
 
-Then open:
+Then open **http://localhost:8080** in your browser.
 
-```text
-http://localhost:8080
-```
+The frontend (`public/index.html`) also works if you open it directly as a file — it falls back to static demo data when the server isn't running.
+
+---
 
 ## Run Tests
 
 ```bash
-cmake -S . -B build
-cmake --build build
+cmake -S . -B build && cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-The tests cover CSV loading, city lookup, Trie autocomplete, graph neighbors, BFS, Dijkstra, priority queue alerts, rankings, and request logging.
+Tests cover: CSV loading, city lookup, Trie autocomplete, graph neighbors, BFS path endpoints, Dijkstra found+risk, alert ordering, hottest/coldest sort, and request logging.
 
-## API Endpoints
+---
 
-```text
-GET /api/cities
-GET /api/weather?city=Lahore
-GET /api/suggest?q=is
-GET /api/hottest?k=5
-GET /api/coldest?k=3
-GET /api/alerts?k=5
-GET /api/route?from=Topi&to=Karachi&mode=safe
+## API
+
+```
+GET /api/cities                              — all cities
+GET /api/weather?city=Lahore                 — full weather + forecast
+GET /api/suggest?q=is                        — Trie autocomplete
+GET /api/hottest?k=5                         — top-k hottest
+GET /api/coldest?k=3                         — top-k coldest
+GET /api/alerts?k=5                          — top-k alerts by severity
 GET /api/route?from=Topi&to=Karachi&mode=bfs
-GET /api/requests
+GET /api/route?from=Topi&to=Karachi&mode=safe
+GET /api/requests                            — recent request log
 ```
 
-Example route response:
+Example Dijkstra response:
 
 ```json
 {
@@ -131,26 +130,29 @@ Example route response:
 }
 ```
 
-## Regenerate The Preview Image
+---
 
-The README preview image can be regenerated on Windows with:
+## Adding a City
 
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\generate_dashboard_preview.ps1
+Open `data/weather_data.csv` and add a row:
+
+```
+Name,Lat,Lon,Temp,Condition,Wind,Humidity,AQI,Rain,WindDir
+Abbottabad,34.15,73.21,18,Cloudy,10,60,80,3.0,20
 ```
 
-The live dashboard itself is in `public/index.html` and uses the C++ API when the server is running. If opened directly as a file, it falls back to static demo data so the UI can still be viewed.
+Then add its graph connections in `src/main.cpp` inside `seedRoutesAndAlerts()`:
 
-## Resume Bullets
+```cpp
+engine.addRoute("Islamabad", "Abbottabad");
+```
 
-- Built a C++17 weather analytics dashboard with a custom HTTP server, CSV-backed dataset, and interactive browser UI.
-- Implemented hash maps, graphs, BFS, Dijkstra, priority queues, Trie autocomplete, vectors, stack-style logging, and partial sorting to power application features.
-- Designed REST-style endpoints for city lookup, route planning, weather alerts, rankings, autocomplete, and request history.
-- Added CMake build support, focused engine tests, and GitHub-ready documentation with architecture and complexity notes.
+Restart the server — that's it.
 
-## Future Improvements
+---
 
-- Add real weather API ingestion behind the CSV loader.
-- Persist request logs and alerts to a lightweight database.
-- Add GitHub Actions CI for CMake build and tests.
-- Add route visualization lines to the dashboard network panel.
+## What's Next
+
+- GitHub Actions CI (CMake build + ctest on push)
+- Live route path drawn on the Leaflet map
+- Real weather API ingestion behind the CSV loader
