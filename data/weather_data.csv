@@ -1,0 +1,11 @@
+City,Lat,Lon,Temp,Condition,Wind,Humidity,AQI,Rain,WindDir
+Topi,34.07,72.63,21,Windy,15,45,45,0.0,315
+Islamabad,33.68,73.04,22,Rainy,10,50,120,5.2,45
+Lahore,31.52,74.35,32,Sunny,5,40,350,0.0,135
+Karachi,24.86,67.00,35,Windy,25,70,150,0.0,270
+Peshawar,34.01,71.52,20,Cloudy,12,55,180,1.5,90
+Quetta,30.17,66.97,5,Snowy,15,40,30,12.0,10
+Multan,30.15,71.52,38,Hot,8,20,200,0.0,225
+Faisalabad,31.45,73.14,34,Sunny,9,35,210,0.0,160
+Hyderabad,25.39,68.36,37,Hot,18,58,135,0.0,240
+Rawalpindi,33.60,73.05,23,Cloudy,11,52,115,2.1,55

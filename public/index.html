@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Weather Analytics Dashboard</title>
+    <style>
+        :root {
+            --bg: #08111f;
+            --panel: rgba(15, 23, 42, 0.82);
+            --panel-strong: rgba(15, 23, 42, 0.95);
+            --line: rgba(148, 163, 184, 0.22);
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-2: #22c55e;
+            --warn: #f97316;
+            --danger: #ef4444;
+            --radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, Segoe UI, Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 30rem),
+                linear-gradient(135deg, #08111f 0%, #111827 50%, #172554 100%);
+        }
+
+        button, input, select {
+            font: inherit;
+        }
+
+        .shell {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            padding: 24px;
+            border-right: 1px solid var(--line);
+            background: rgba(2, 6, 23, 0.62);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .brand {
+            margin-bottom: 24px;
+        }
+
+        .brand h1 {
+            margin: 0 0 8px;
+            font-size: 1.15rem;
+            line-height: 1.25;
+        }
+
+        .brand p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.5;
+        }
+
+        .label {
+            display: block;
+            margin: 18px 0 8px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .input, .select {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 11px 12px;
+            color: var(--text);
+            background: rgba(15, 23, 42, 0.9);
+            outline: none;
+        }
+
+        .input:focus, .select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+        }
+
+        .button {
+            width: 100%;
+            border: 0;
+            border-radius: var(--radius);
+            padding: 11px 14px;
+            color: #082f49;
+            background: var(--accent);
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .button.secondary {
+            color: var(--text);
+            background: rgba(148, 163, 184, 0.14);
+            border: 1px solid var(--line);
+        }
+
+        .route-form {
+            display: grid;
+            gap: 10px;
+        }
+
+        .chip-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 7px 10px;
+            color: var(--text);
+            background: rgba(148, 163, 184, 0.11);
+            font-size: 0.82rem;
+            cursor: pointer;
+        }
+
+        .main {
+            width: min(1360px, 100%);
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .topbar h2 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .status {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 7px 10px;
+            color: var(--muted);
+            background: rgba(15, 23, 42, 0.7);
+            font-size: 0.8rem;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--panel);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+        }
+
+        .summary {
+            padding: 28px;
+            min-height: 265px;
+            display: grid;
+            align-content: space-between;
+            background:
+                linear-gradient(135deg, rgba(14, 165, 233, 0.26), rgba(15, 23, 42, 0.68)),
+                var(--panel);
+        }
+
+        .summary-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .city {
+            margin: 0;
+            font-size: clamp(2.1rem, 4vw, 4rem);
+            line-height: 1;
+        }
+
+        .condition {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 1rem;
+        }
+
+        .temp {
+            font-size: clamp(4.4rem, 8vw, 7rem);
+            font-weight: 850;
+            letter-spacing: -0.05em;
+            line-height: 0.92;
+            text-align: right;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .metric {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 13px;
+            background: rgba(2, 6, 23, 0.26);
+        }
+
+        .metric span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+
+        .metric strong {
+            font-size: 1.1rem;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 18px 0;
+        }
+
+        .panel-title {
+            margin: 0;
+            font-size: 0.94rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 6px 9px;
+            color: var(--muted);
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+
+        .tab.active {
+            color: #082f49;
+            background: var(--accent);
+            border-color: var(--accent);
+            font-weight: 800;
+        }
+
+        .chart-wrap {
+            padding: 10px 18px 18px;
+            height: 228px;
+        }
+
+        .chart-labels {
+            display: flex;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 0.72rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .list {
+            padding: 14px 18px 18px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: center;
+            border-bottom: 1px solid var(--line);
+            padding: 10px 0;
+        }
+
+        .row:last-child {
+            border-bottom: 0;
+        }
+
+        .row small {
+            color: var(--muted);
+        }
+
+        .rank {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 10px;
+            background: rgba(148, 163, 184, 0.08);
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .route-map {
+            padding: 18px;
+            min-height: 260px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .route-result {
+            border: 1px dashed rgba(56, 189, 248, 0.42);
+            border-radius: var(--radius);
+            padding: 12px;
+            color: var(--muted);
+            background: rgba(56, 189, 248, 0.08);
+            min-height: 62px;
+        }
+
+        .path {
+            color: var(--text);
+            font-weight: 800;
+        }
+
+        .node-board {
+            position: relative;
+            min-height: 180px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            overflow: hidden;
+            background:
+                linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+                linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+
+        .node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(56, 189, 248, 0.62);
+            border-radius: 999px;
+            padding: 6px 9px;
+            background: var(--panel-strong);
+            color: var(--text);
+            font-size: 0.75rem;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .forecast {
+            grid-column: 1 / -1;
+        }
+
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 14px 18px 18px;
+        }
+
+        .forecast-card {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 12px;
+            background: rgba(148, 163, 184, 0.08);
+        }
+
+        .forecast-card strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .forecast-card span {
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+
+        @media (max-width: 980px) {
+            .shell { grid-template-columns: 1fr; }
+            .sidebar { position: static; height: auto; }
+            .hero, .grid { grid-template-columns: 1fr; }
+            .meta-grid, .forecast-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 560px) {
+            .main { padding: 18px; }
+            .summary-top { display: block; }
+            .temp { text-align: left; margin-top: 18px; }
+            .meta-grid, .forecast-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>DSA Weather Analytics Dashboard</h1>
+                <p>C++17 backend using hash maps, graphs, heaps, stacks, sorting, and Trie autocomplete.</p>
+            </div>
+
+            <label class="label" for="city-select">City Lookup</label>
+            <select id="city-select" class="select"></select>
+
+            <label class="label" for="city-search">Trie Autocomplete</label>
+            <input id="city-search" class="input" list="suggestions" placeholder="Type a city name">
+            <datalist id="suggestions"></datalist>
+            <button class="button" style="margin-top:10px" id="search-btn">Load City</button>
+
+            <label class="label">Graph Neighbors</label>
+            <div id="neighbor-list" class="chip-list"></div>
+
+            <label class="label">Route Planner</label>
+            <div class="route-form">
+                <select id="from-select" class="select"></select>
+                <select id="to-select" class="select"></select>
+                <select id="route-mode" class="select">
+                    <option value="safe">Dijkstra: lowest weather risk</option>
+                    <option value="bfs">BFS: fewest route hops</option>
+                </select>
+                <button class="button secondary" id="route-btn">Find Route</button>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <h2>Portfolio-ready C++ DSA project</h2>
+                <div class="status" id="api-status">Connecting to C++ API...</div>
+            </div>
+
+            <section class="hero">
+                <div class="summary panel">
+                    <div class="summary-top">
+                        <div>
+                            <h3 class="city" id="city-name">Topi</h3>
+                            <div class="condition" id="condition">Loading...</div>
+                        </div>
+                        <div class="temp" id="temperature">--&deg;</div>
+                    </div>
+                    <div class="meta-grid">
+                        <div class="metric"><span>Wind</span><strong id="wind">--</strong></div>
+                        <div class="metric"><span>Humidity</span><strong id="humidity">--</strong></div>
+                        <div class="metric"><span>AQI</span><strong id="aqi">--</strong></div>
+                        <div class="metric"><span>Rain</span><strong id="rain">--</strong></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3 class="panel-title">Vector Time Series</h3>
+                        <div class="tabs">
+                            <button class="tab active" data-mode="hourly">24H</button>
+                            <button class="tab" data-mode="weekly">Week</button>
+                            <button class="tab" data-mode="monthly">Month</button>
+                            <button class="tab" data-mode="yearly">Year</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap">
+                        <svg id="chart" viewBox="0 0 620 170" width="100%" height="170" role="img" aria-label="Temperature trend"></svg>
+                        <div class="chart-labels"><span id="chart-min">--</span><span id="chart-max">--</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid">
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3 class="panel-title">Priority Queue Alerts</h3>
+                    </div>
+                    <div class="list" id="alerts"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3 class="panel-title">Partial Sort Rankings</h3>
+                    </div>
+                    <div class="list" id="rankings"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3 class="panel-title">Graph Route Result</h3>
+                    </div>
+                    <div class="route-map">
+                        <div class="route-result" id="route-result">Choose two cities to compare BFS and Dijkstra route behavior.</div>
+                        <div class="node-board" id="node-board"></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <h3 class="panel-title">Adjacency List</h3>
+                    </div>
+                    <div class="list" id="adjacency"></div>
+                </div>
+
+                <div class="panel forecast">
+                    <div class="panel-head">
+                        <h3 class="panel-title">Generated 10-Day Forecast</h3>
+                    </div>
+                    <div class="forecast-grid" id="forecast"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const fallbackCities = [
+            { name: 'Topi', temp: 21, condition: 'Windy' },
+            { name: 'Islamabad', temp: 22, condition: 'Rainy' },
+            { name: 'Lahore', temp: 32, condition: 'Sunny' },
+            { name: 'Karachi', temp: 35, condition: 'Windy' },
+            { name: 'Peshawar', temp: 20, condition: 'Cloudy' },
+            { name: 'Quetta', temp: 5, condition: 'Snowy' },
+            { name: 'Multan', temp: 38, condition: 'Hot' },
+            { name: 'Faisalabad', temp: 34, condition: 'Sunny' },
+            { name: 'Hyderabad', temp: 37, condition: 'Hot' },
+            { name: 'Rawalpindi', temp: 23, condition: 'Cloudy' }
+        ];
+
+        const fallbackCoords = {
+            Topi: [34.07, 72.63], Islamabad: [33.68, 73.04], Lahore: [31.52, 74.35],
+            Karachi: [24.86, 67.00], Peshawar: [34.01, 71.52], Quetta: [30.17, 66.97],
+            Multan: [30.15, 71.52], Faisalabad: [31.45, 73.14], Hyderabad: [25.39, 68.36],
+            Rawalpindi: [33.60, 73.05]
+        };
+
+        const fallbackNeighbors = {
+            Topi: ['Islamabad', 'Peshawar'],
+            Islamabad: ['Peshawar', 'Lahore', 'Topi', 'Rawalpindi'],
+            Peshawar: ['Islamabad', 'Topi'],
+            Rawalpindi: ['Islamabad', 'Lahore'],
+            Lahore: ['Islamabad', 'Rawalpindi', 'Multan', 'Faisalabad'],
+            Faisalabad: ['Lahore', 'Multan'],
+            Multan: ['Lahore', 'Faisalabad', 'Hyderabad', 'Quetta'],
+            Hyderabad: ['Multan', 'Karachi'],
+            Karachi: ['Hyderabad', 'Quetta'],
+            Quetta: ['Karachi', 'Multan']
+        };
+
+        let currentWeather = null;
+        let cityNames = fallbackCities.map(c => c.name);
+        let apiOnline = true;
+
+        const $ = id => document.getElementById(id);
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        async function api(path, fallback) {
+            try {
+                const response = await fetch(path);
+                if (!response.ok) throw new Error(response.statusText);
+                apiOnline = true;
+                $('api-status').textContent = 'Live C++ API connected';
+                return await response.json();
+            } catch (error) {
+                apiOnline = false;
+                $('api-status').textContent = 'Static demo mode';
+                return typeof fallback === 'function' ? fallback() : fallback;
+            }
+        }
+
+        function buildSeries(temp, length, spread) {
+            return Array.from({ length }, (_, i) => temp + Math.round(Math.sin((i / length) * Math.PI * 2) * spread));
+        }
+
+        function fallbackWeather(cityName) {
+            const base = fallbackCities.find(c => c.name === cityName) || fallbackCities[0];
+            const [lat, lon] = fallbackCoords[base.name] || fallbackCoords.Topi;
+            const neighborNames = fallbackNeighbors[base.name] || [];
+            return {
+                city: base.name,
+                lat,
+                lon,
+                condition: base.condition,
+                current: {
+                    temperature_2d: base.temp,
+                    wind_speed_10m: base.name === 'Karachi' ? 25 : 12,
+                    relative_humidity_2d: base.condition === 'Rainy' ? 65 : 45,
+                    rain: base.condition === 'Rainy' ? 5.2 : 0,
+                    aqi: base.name === 'Lahore' ? 350 : 120,
+                    wind_dir: 180,
+                    condition: base.condition
+                },
+                hourly: buildSeries(base.temp, 24, 4),
+                weekly: buildSeries(base.temp, 7, 3),
+                monthly: buildSeries(base.temp, 30, 5),
+                yearly: buildSeries(base.temp, 12, 12),
+                forecast: Array.from({ length: 10 }, (_, i) => ({
+                    day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun','Mon','Tue','Wed'][i],
+                    high: base.temp + 3 + (i % 4),
+                    low: base.temp - 5 + (i % 3),
+                    rain_prob: base.condition === 'Rainy' ? 80 : 15 + i * 3,
+                    cond: base.condition
+                })),
+                neighbors: neighborNames.map(name => ({ city: name, distance_km: 110, weather_risk: 4 })),
+                hottest_cities: [...fallbackCities].sort((a, b) => b.temp - a.temp).slice(0, 5),
+                coldest_cities: [...fallbackCities].sort((a, b) => a.temp - b.temp).slice(0, 5)
+            };
+        }
+
+        async function loadBootstrap() {
+            const cities = await api('/api/cities', fallbackCities.map(c => ({ name: c.name })));
+            cityNames = cities.map(c => c.name);
+            fillCitySelects(cityNames);
+            await loadCity('Topi');
+            await renderAlerts();
+            await renderRankings();
+            drawNodeBoard();
+        }
+
+        function fillCitySelects(names) {
+            const options = names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+            $('city-select').innerHTML = options;
+            $('from-select').innerHTML = options;
+            $('to-select').innerHTML = options;
+            $('to-select').value = names.includes('Karachi') ? 'Karachi' : names[names.length - 1];
+        }
+
+        async function loadCity(cityName) {
+            const data = await api(`/api/weather?city=${encodeURIComponent(cityName)}`, () => fallbackWeather(cityName));
+            currentWeather = data;
+            $('city-select').value = data.city;
+            $('city-name').textContent = data.city;
+            $('condition').textContent = `${data.current.condition} near ${data.lat.toFixed(2)}, ${data.lon.toFixed(2)}`;
+            $('temperature').innerHTML = `${data.current.temperature_2d}&deg;`;
+            $('wind').textContent = `${data.current.wind_speed_10m} km/h`;
+            $('humidity').textContent = `${data.current.relative_humidity_2d}%`;
+            $('aqi').textContent = data.current.aqi;
+            $('rain').textContent = `${data.current.rain} mm`;
+            renderNeighbors(data.neighbors);
+            renderForecast(data.forecast);
+            renderAdjacency(data.neighbors);
+            renderChart('hourly');
+        }
+
+        function renderChart(mode) {
+            const data = currentWeather?.[mode] || [];
+            const svg = $('chart');
+            if (!data.length) {
+                svg.innerHTML = '';
+                return;
+            }
+
+            const width = 620;
+            const height = 170;
+            const padding = 16;
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const range = Math.max(1, max - min);
+            const points = data.map((value, i) => {
+                const x = padding + (i / Math.max(1, data.length - 1)) * (width - padding * 2);
+                const y = height - padding - ((value - min) / range) * (height - padding * 2);
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+
+            svg.innerHTML = `
+                <defs>
+                    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.42"/>
+                        <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <polyline points="${points} ${width - padding},${height - padding} ${padding},${height - padding}" fill="url(#fill)" stroke="none"></polyline>
+                <polyline points="${points}" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            `;
+            $('chart-min').textContent = `Min ${min} deg`;
+            $('chart-max').textContent = `Max ${max} deg`;
+        }
+
+        function renderNeighbors(neighbors) {
+            $('neighbor-list').innerHTML = neighbors.length
+                ? neighbors.map(edge => `<button class="chip" data-city="${escapeHtml(edge.city)}">${escapeHtml(edge.city)}</button>`).join('')
+                : '<span class="status">No direct neighbors</span>';
+        }
+
+        function renderAdjacency(neighbors) {
+            $('adjacency').innerHTML = neighbors.map(edge => `
+                <div class="row">
+                    <div><strong>${escapeHtml(currentWeather.city)} to ${escapeHtml(edge.city)}</strong><br><small>Weighted edge in adjacency list</small></div>
+                    <div>${Math.round(edge.distance_km)} km | risk ${edge.weather_risk}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderForecast(forecast) {
+            $('forecast').innerHTML = forecast.map(day => `
+                <div class="forecast-card">
+                    <strong>${escapeHtml(day.day)}</strong>
+                    <div>${escapeHtml(day.cond)}</div>
+                    <span>${day.high}&deg; / ${day.low}&deg; | ${day.rain_prob}% rain</span>
+                </div>
+            `).join('');
+        }
+
+        async function renderAlerts() {
+            const fallback = [
+                { severity: 9, message: 'Heat advisory: high temperature trend', city: 'Multan' },
+                { severity: 8, message: 'Air quality warning: reduce outdoor exposure', city: 'Lahore' },
+                { severity: 7, message: 'Rainfall alert: possible slick routes', city: 'Islamabad' }
+            ];
+            const alerts = await api('/api/alerts?k=5', fallback);
+            $('alerts').innerHTML = alerts.map(alert => `
+                <div class="row">
+                    <div><strong>${escapeHtml(alert.city)}</strong><br><small>${escapeHtml(alert.message)}</small></div>
+                    <div style="color:${alert.severity >= 8 ? 'var(--danger)' : 'var(--warn)'}">Risk ${alert.severity}/10</div>
+                </div>
+            `).join('');
+        }
+
+        async function renderRankings() {
+            const hottest = await api('/api/hottest?k=5', () => [...fallbackCities].sort((a, b) => b.temp - a.temp).slice(0, 5));
+            const coldest = await api('/api/coldest?k=3', () => [...fallbackCities].sort((a, b) => a.temp - b.temp).slice(0, 3));
+            $('rankings').innerHTML = `
+                ${hottest.map((city, index) => `<button class="rank" data-city="${escapeHtml(city.name)}"><span>${index + 1}. ${escapeHtml(city.name)}</span><strong>${city.temp}&deg;</strong></button>`).join('')}
+                <div class="status">Coldest: ${coldest.map(c => `${escapeHtml(c.name)} ${c.temp} deg`).join(' | ')}</div>
+            `;
+        }
+
+        async function findRoute() {
+            const from = $('from-select').value;
+            const to = $('to-select').value;
+            const mode = $('route-mode').value;
+            const fallbackRoute = () => ({
+                found: true,
+                algorithm: mode === 'bfs' ? 'BFS shortest hops' : 'Dijkstra lowest weather risk',
+                path: from === to ? [from] : [from, 'Islamabad', 'Lahore', 'Multan', 'Hyderabad', to].filter((v, i, arr) => arr.indexOf(v) === i),
+                hops: 5,
+                total_risk: mode === 'bfs' ? 0 : 18,
+                total_distance_km: 920
+            });
+            const route = await api(`/api/route?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`, fallbackRoute);
+            $('route-result').innerHTML = route.found
+                ? `<div class="path">${route.path.map(escapeHtml).join(' -> ')}</div><small>${escapeHtml(route.algorithm)} | ${route.hops} hops | risk ${route.total_risk} | ${route.total_distance_km} km</small>`
+                : 'No route found for the selected cities.';
+        }
+
+        function drawNodeBoard() {
+            const coords = {
+                Topi: [62, 22], Islamabad: [68, 35], Peshawar: [50, 25], Lahore: [72, 55],
+                Rawalpindi: [61, 38], Faisalabad: [66, 64], Multan: [58, 74], Hyderabad: [38, 86],
+                Karachi: [26, 92], Quetta: [24, 68]
+            };
+            $('node-board').innerHTML = cityNames.map(name => {
+                const [x, y] = coords[name] || [50, 50];
+                return `<button class="node" style="left:${x}%;top:${y}%" data-city="${escapeHtml(name)}">${escapeHtml(name)}</button>`;
+            }).join('');
+        }
+
+        $('city-select').addEventListener('change', event => loadCity(event.target.value));
+        $('search-btn').addEventListener('click', () => loadCity($('city-search').value || $('city-select').value));
+        $('route-btn').addEventListener('click', findRoute);
+
+        document.body.addEventListener('click', event => {
+            const city = event.target.closest('[data-city]')?.dataset.city;
+            if (city) loadCity(city);
+        });
+
+        $('city-search').addEventListener('input', async event => {
+            const query = event.target.value.trim();
+            if (!query) return;
+            const suggestions = await api(`/api/suggest?q=${encodeURIComponent(query)}`, () => cityNames.filter(name => name.toLowerCase().startsWith(query.toLowerCase())));
+            $('suggestions').innerHTML = suggestions.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+        });
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                renderChart(tab.dataset.mode);
+            });
+        });
+
+        loadBootstrap();
+    </script>
+</body>
+</html>
