@@ -196,6 +196,10 @@ void seedRoutesAndAlerts() {
     engine.addRoute("Karachi", "Quetta");
     engine.addRoute("Quetta", "Multan");
 
+    // High-risk shortcut corridors make BFS and Dijkstra visibly different.
+    engine.addRoute("Lahore", "Karachi", 90, 1020);
+    engine.addRoute("Faisalabad", "Karachi", 75, 945);
+
     for (const City& city : engine.getAllCities()) {
         if (city.temp >= 30) {
             engine.addAlert(9, "Heat advisory: high temperature trend", city.name);
@@ -265,9 +269,7 @@ void handleApi(SOCKET clientSock, const std::string& path, const std::unordered_
 
         if (mode == "bfs") {
             std::vector<std::string> path = engine.shortestRouteBfs(from, to);
-            RouteResult result;
-            result.found = !path.empty();
-            result.path = path;
+            RouteResult result = engine.summarizePath(path);
             sendJson(clientSock, routeJson(result, "BFS shortest hops"));
             return;
         }

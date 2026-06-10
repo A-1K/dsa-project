@@ -269,6 +269,15 @@ public:
         cityGraph[normalize(cityB)].push_back({a->second.name, distance, risk});
     }
 
+    void addRoute(const std::string& cityA, const std::string& cityB, int weatherRisk, double distanceKm) {
+        auto a = cityDatabase.find(normalize(cityA));
+        auto b = cityDatabase.find(normalize(cityB));
+        if (a == cityDatabase.end() || b == cityDatabase.end()) return;
+
+        cityGraph[normalize(cityA)].push_back({b->second.name, distanceKm, weatherRisk});
+        cityGraph[normalize(cityB)].push_back({a->second.name, distanceKm, weatherRisk});
+    }
+
     std::vector<RouteEdge> getNeighbors(const std::string& name) const {
         auto it = cityGraph.find(normalize(name));
         if (it == cityGraph.end()) return {};
@@ -311,6 +320,40 @@ public:
         }
         std::reverse(path.begin(), path.end());
         return path;
+    }
+
+    RouteResult summarizePath(const std::vector<std::string>& path) const {
+        RouteResult result;
+        result.path = path;
+        result.found = !path.empty();
+        if (path.size() < 2) return result;
+
+        for (size_t i = 0; i + 1 < path.size(); i++) {
+            const std::string fromKey = normalize(path[i]);
+            const std::string toKey = normalize(path[i + 1]);
+            auto graphIt = cityGraph.find(fromKey);
+            if (graphIt == cityGraph.end()) {
+                result.found = false;
+                return result;
+            }
+
+            bool edgeFound = false;
+            for (const RouteEdge& edge : graphIt->second) {
+                if (normalize(edge.city) == toKey) {
+                    result.totalRisk += edge.weatherRisk;
+                    result.totalDistanceKm += edge.distanceKm;
+                    edgeFound = true;
+                    break;
+                }
+            }
+
+            if (!edgeFound) {
+                result.found = false;
+                return result;
+            }
+        }
+
+        return result;
     }
 
     RouteResult safestRouteDijkstra(const std::string& start, const std::string& goal) const {

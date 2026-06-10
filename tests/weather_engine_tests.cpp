@@ -38,6 +38,8 @@ void buildEngine(WeatherEngine& engine) {
     engine.addRoute("Hyderabad", "Karachi");
     engine.addRoute("Karachi", "Quetta");
     engine.addRoute("Quetta", "Multan");
+    engine.addRoute("Lahore", "Karachi", 90, 1020);
+    engine.addRoute("Faisalabad", "Karachi", 75, 945);
 
     engine.addAlert(9, "Heat advisory", "Multan");
     engine.addAlert(4, "Light rain", "Islamabad");
@@ -66,12 +68,17 @@ int main() {
     assert(!bfs.empty());
     assert(bfs.front() == "Topi");
     assert(bfs.back() == "Karachi");
+    RouteResult bfsSummary = engine.summarizePath(bfs);
+    assert(bfsSummary.found);
+    assert(bfsSummary.totalRisk > 0);
+    assert(bfsSummary.totalDistanceKm > 0);
 
     RouteResult safest = engine.safestRouteDijkstra("Topi", "Karachi");
     assert(safest.found);
     assert(safest.totalRisk > 0);
     assert(safest.path.front() == "Topi");
     assert(safest.path.back() == "Karachi");
+    assert(safest.totalRisk < bfsSummary.totalRisk);
 
     auto alerts = engine.getTopAlerts(2);
     assert(alerts.size() == 2);

@@ -580,7 +580,7 @@
             Faisalabad: ['Lahore', 'Multan'],
             Multan: ['Lahore', 'Faisalabad', 'Hyderabad', 'Quetta'],
             Hyderabad: ['Multan', 'Karachi'],
-            Karachi: ['Hyderabad', 'Quetta'],
+            Karachi: ['Hyderabad', 'Quetta', 'Lahore', 'Faisalabad'],
             Quetta: ['Karachi', 'Multan']
         };
 
@@ -775,10 +775,12 @@
             const fallbackRoute = () => ({
                 found: true,
                 algorithm: mode === 'bfs' ? 'BFS shortest hops' : 'Dijkstra lowest weather risk',
-                path: from === to ? [from] : [from, 'Islamabad', 'Lahore', 'Multan', 'Hyderabad', to].filter((v, i, arr) => arr.indexOf(v) === i),
-                hops: 5,
-                total_risk: mode === 'bfs' ? 0 : 18,
-                total_distance_km: 920
+                path: mode === 'bfs'
+                    ? (from === to ? [from] : [from, 'Islamabad', 'Lahore', to].filter((v, i, arr) => arr.indexOf(v) === i))
+                    : (from === to ? [from] : [from, 'Islamabad', 'Lahore', 'Multan', 'Hyderabad', to].filter((v, i, arr) => arr.indexOf(v) === i)),
+                hops: mode === 'bfs' ? 3 : 5,
+                total_risk: mode === 'bfs' ? 124 : 57,
+                total_distance_km: mode === 'bfs' ? 1470 : 1400
             });
             const route = await api(`/api/route?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`, fallbackRoute);
             $('route-result').innerHTML = route.found
