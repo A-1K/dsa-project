@@ -86,9 +86,8 @@ cmake --build build
 .\build\Debug\weather_dashboard.exe
 ```
 
-Then open **http://localhost:8080** in your browser.
+Then open **http://localhost:8080** 
 
-The frontend (`public/index.html`) also works if you open it directly as a file — it falls back to static demo data when the server isn't running.
 
 ---
 
@@ -147,7 +146,7 @@ Then add its graph connections in `src/main.cpp` inside `seedRoutesAndAlerts()`:
 engine.addRoute("Islamabad", "Abbottabad");
 ```
 
-Restart the server — that's it.
+Restart the server.
 
 ---
 
